@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+# Initialises the Keycloak ↔ TeamCity OIDC integration for local development.
+#
+# Usage:
+#   ./init_local_keycloak_integration.sh [KC_USER [KC_PASS]]
+#
+# Defaults:
+#   KC_USER=admin   KC_PASS=admin
+#
+# Environment variable overrides (take precedence over positional args):
+#   KC_URL      Keycloak base URL   (default: http://localhost:8080)
+#   TC_URL      TeamCity base URL   (default: http://localhost:8111)
+#   KC_REALM    Keycloak realm      (default: master)
+#   TC_DATADIR  TC data directory   (default: servers/2025.11/.datadir, relative to this script)
+
+set -euo pipefail
+
+# ---- Configuration ---------------------------------------------------------
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+KC_USER="${1:-admin}"
+KC_PASS="${2:-admin}"
+KC_URL="${KC_URL:-http://localhost:8080}"
+TC_URL="${TC_URL:-http://localhost:8111}"
+KC_REALM="${KC_REALM:-master}"
+TC_DATADIR="${TC_DATADIR:-$SCRIPT_DIR/servers/2025.11/.datadir}"
+TC_CLIENT_ID="teamcity"
+TC_CONFIG_FILE="$TC_DATADIR/config/oidc-auth-plugin.json"
+
+# ---- Helpers ---------------------------------------------------------------
+
+info()  { echo "[INFO]  $*"; }
+error() { echo "[ERROR] $*" >&2; exit 1; }
+
+require_cmd() { command -v "$1" &>/dev/null || error "'$1' is required but not found in PATH"; }
+
+require_cmd curl
+require_cmd python3
+
+# ---- Preflight checks ------------------------------------------------------
+
+info "Checking Keycloak at $KC_URL ..."
+curl -sf "$KC_URL/realms/$KC_REALM/.well-known/openid-configuration" -o /dev/null \
+  || error "Keycloak is not reachable at $KC_URL (realm: $KC_REALM)"
+
+info "Checking TeamCity at $TC_URL ..."
+curl -sf "$TC_URL/login.html" -o /dev/null \
+  || error "TeamCity is not reachable at $TC_URL"
+
+[[ -d "$TC_DATADIR/config" ]] \
+  || error "TeamCity data directory not found at $TC_DATADIR"
+
+# ---- Keycloak admin token --------------------------------------------------
+
+info "Obtaining Keycloak admin token for user '$KC_USER' ..."
+TOKEN_RESPONSE=$(curl -sf -X POST "$KC_URL/realms/$KC_REALM/protocol/openid-connect/token" \
+  -d "client_id=admin-cli" \
+  -d "username=$KC_USER" \
+  -d "password=$KC_PASS" \
+  -d "grant_type=password") \
+  || error "Failed to obtain Keycloak admin token — check credentials and realm"
+
+KC_TOKEN=$(echo "$TOKEN_RESPONSE" \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('access_token') or (lambda: (_ for _ in ()).throw(Exception(d.get('error_description','unknown error'))))())" \
+  2>/dev/null) \
+  || error "Could not parse admin token from Keycloak response"
+
+# ---- Create or update Keycloak client --------------------------------------
+
+info "Looking up client '$TC_CLIENT_ID' in realm '$KC_REALM' ..."
+EXISTING=$(curl -sf \
+  -H "Authorization: Bearer $KC_TOKEN" \
+  "$KC_URL/admin/realms/$KC_REALM/clients?clientId=$TC_CLIENT_ID")
+CLIENT_COUNT=$(echo "$EXISTING" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+
+CLIENT_PAYLOAD=$(python3 -c "
+import json
+print(json.dumps({
+  'clientId': '$TC_CLIENT_ID',
+  'name': 'TeamCity',
+  'description': 'TeamCity OIDC authentication',
+  'enabled': True,
+  'publicClient': False,
+  'standardFlowEnabled': True,
+  'directAccessGrantsEnabled': False,
+  'redirectUris': ['$TC_URL/app/oidc/callback'],
+  'webOrigins': ['$TC_URL'],
+  'protocol': 'openid-connect'
+}))")
+
+if [[ "$CLIENT_COUNT" -eq 0 ]]; then
+  info "Creating client '$TC_CLIENT_ID' ..."
+  HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+    -H "Authorization: Bearer $KC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "$KC_URL/admin/realms/$KC_REALM/clients" \
+    -d "$CLIENT_PAYLOAD")
+  [[ "$HTTP_STATUS" == "201" ]] || error "Failed to create client (HTTP $HTTP_STATUS)"
+  info "Client created."
+else
+  CLIENT_UUID=$(echo "$EXISTING" | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
+  info "Client already exists (id: $CLIENT_UUID), updating ..."
+  HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
+    -H "Authorization: Bearer $KC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID" \
+    -d "$CLIENT_PAYLOAD")
+  [[ "$HTTP_STATUS" == "204" ]] || error "Failed to update client (HTTP $HTTP_STATUS)"
+  info "Client updated."
+fi
+
+# ---- Get/generate client secret --------------------------------------------
+
+CLIENT_UUID=$(curl -sf \
+  -H "Authorization: Bearer $KC_TOKEN" \
+  "$KC_URL/admin/realms/$KC_REALM/clients?clientId=$TC_CLIENT_ID" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
+
+info "Generating client secret ..."
+SECRET_RESPONSE=$(curl -sf -X POST \
+  -H "Authorization: Bearer $KC_TOKEN" \
+  "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/client-secret")
+CLIENT_SECRET=$(echo "$SECRET_RESPONSE" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])") \
+  || error "Failed to retrieve client secret"
+
+info "Client secret obtained."
+
+# ---- Write plugin config file ----------------------------------------------
+
+info "Writing plugin config to $TC_CONFIG_FILE ..."
+python3 -c "
+import json
+config = {
+  'issuerUrl': '$KC_URL/realms/$KC_REALM',
+  'discoveryEnabled': True,
+  'authorizationEndpoint': None,
+  'tokenEndpoint': None,
+  'userInfoEndpoint': None,
+  'jwksUri': None,
+  'clientId': '$TC_CLIENT_ID',
+  'clientSecret': '$CLIENT_SECRET',
+  'scopes': ['openid', 'email', 'profile'],
+  'callbackBaseUrl': None,
+  'createUsersAutomatically': True,
+  'allowedEmailDomains': [],
+  'assignGroups': False,
+  'removeUnassignedGroups': False,
+  'groupsClaimName': 'groups',
+  'usernameClaim': {'mappingType': 'CLAIM', 'claimName': 'preferred_username'},
+  'emailClaim':    {'mappingType': 'CLAIM', 'claimName': 'email'},
+  'displayNameClaim': {'mappingType': 'CLAIM', 'claimName': 'name'},
+  'httpTimeoutSeconds': 30,
+  'tokenClockSkewSeconds': 30
+}
+print(json.dumps(config, indent=2))
+" > "$TC_CONFIG_FILE"
+
+# ---- Done ------------------------------------------------------------------
+
+info ""
+info "Integration configured successfully."
+info ""
+info "  Keycloak client : $TC_CLIENT_ID"
+info "  Issuer URL      : $KC_URL/realms/$KC_REALM"
+info "  Callback URL    : $TC_URL/app/oidc/callback"
+info "  Config file     : $TC_CONFIG_FILE"
+info ""
+info "To test: open $TC_URL/app/oidc/login in your browser."
+info "The plugin hot-reloads the config file — no TeamCity restart needed."
