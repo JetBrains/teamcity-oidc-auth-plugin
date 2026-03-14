@@ -8,6 +8,8 @@ import jetbrains.buildServer.serverSide.ServerPaths;
 import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
 import jetbrains.buildServer.users.UserModel;
 import jetbrains.buildServer.util.HTTPRequestBuilder;
+import jetbrains.buildServer.web.openapi.PagePlaces;
+import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.teamcity.oidc.auth.OidcAuthenticationScheme;
@@ -18,6 +20,7 @@ import org.jetbrains.teamcity.oidc.oidc.OidcClient;
 import org.jetbrains.teamcity.oidc.oidc.OidcIdTokenValidator;
 import org.jetbrains.teamcity.oidc.web.OidcCallbackController;
 import org.jetbrains.teamcity.oidc.web.OidcLoginController;
+import org.jetbrains.teamcity.oidc.web.OidcLoginPageExtension;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -87,5 +90,14 @@ public class OidcPluginConfiguration {
             @NotNull SBuildServer server,
             @NotNull WebControllerManager webControllerManager) {
         return new OidcCallbackController(server, webControllerManager);
+    }
+
+    @Bean
+    public OidcLoginPageExtension oidcLoginPageExtension(
+            @NotNull PagePlaces pagePlaces,
+            @NotNull PluginDescriptor pluginDescriptor,
+            @NotNull OidcPluginSettingsStorage settingsStorage,
+            @NotNull OidcAuthenticationScheme scheme) {
+        return new OidcLoginPageExtension(pagePlaces, pluginDescriptor, settingsStorage, scheme);
     }
 }

@@ -76,6 +76,16 @@ public class OidcPluginSettings {
     /** Allowed clock skew in seconds when validating exp/iat. Default 30. */
     private int tokenClockSkewSeconds = OidcConstants.DEFAULT_CLOCK_SKEW_SECONDS;
 
+    /** Label shown as the tooltip/alt text on the login page icon. Default: "Log in with OIDC". */
+    private String loginButtonLabel = OidcConstants.DEFAULT_LOGIN_BUTTON_LABEL;
+
+    /**
+     * URL of the icon image shown on the login page.
+     * May be absolute, root-relative, or a data URI.
+     * When null, a built-in SVG is used.
+     */
+    private String loginButtonIconUrl;
+
     // ---- helpers -----------------------------------------------------------
 
     private static OidcClaimMappingSettings defaultSub() {
@@ -152,4 +162,10 @@ public class OidcPluginSettings {
 
     public int getTokenClockSkewSeconds() { return tokenClockSkewSeconds; }
     public void setTokenClockSkewSeconds(int tokenClockSkewSeconds) { this.tokenClockSkewSeconds = tokenClockSkewSeconds; }
+
+    public String getLoginButtonLabel() { return loginButtonLabel; }
+    public void setLoginButtonLabel(String loginButtonLabel) { this.loginButtonLabel = loginButtonLabel; }
+
+    public String getLoginButtonIconUrl() { return loginButtonIconUrl; }
+    public void setLoginButtonIconUrl(String loginButtonIconUrl) { this.loginButtonIconUrl = loginButtonIconUrl; }
 }

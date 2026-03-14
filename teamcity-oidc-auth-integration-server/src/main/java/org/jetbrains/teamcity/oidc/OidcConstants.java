@@ -32,4 +32,5 @@ public final class OidcConstants {
     public static final String DEFAULT_GROUPS_CLAIM       = "groups";
     public static final int    DEFAULT_HTTP_TIMEOUT_SECONDS = 30;
     public static final int    DEFAULT_CLOCK_SKEW_SECONDS   = 30;
+    public static final String DEFAULT_LOGIN_BUTTON_LABEL   = "Log in with OIDC";
 }

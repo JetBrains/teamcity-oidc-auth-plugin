@@ -57,9 +57,11 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         this.userGroupManager = userGroupManager;
         this.rootUrlHolder = rootUrlHolder;
 
-        // Register paths that are accessible without authentication
+        // The login initiator path must be accessible without authentication so unauthenticated
+        // users can start the OIDC flow. The callback path must NOT be exempt — TC's auth
+        // interceptor only calls processAuthenticationRequest for paths that require auth, and
+        // that method is where the code-exchange and token validation happen.
         authInterceptor.addPathNotRequiringAuth(OidcConstants.LOGIN_PATH);
-        authInterceptor.addPathNotRequiringAuth(OidcConstants.CALLBACK_PATH);
     }
 
     @NotNull
@@ -77,6 +79,15 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
     @Override
     public boolean isMultipleInstancesAllowed() {
         return false;
+    }
+
+    public boolean isConfigured() {
+        OidcPluginSettings s = settingsStorage.getSettings();
+        return !isBlank(s.getIssuerUrl()) && !isBlank(s.getClientId());
+    }
+
+    private static boolean isBlank(@org.jetbrains.annotations.Nullable String s) {
+        return s == null || s.trim().isEmpty();
     }
 
     /**
