@@ -109,9 +109,15 @@ public class OidcTokenIntrospectionInterceptor extends SkippableInterceptor {
             session.invalidate();
         }
 
-        String reason = "Session revoked by identity provider — please log in again";
-        response.sendRedirect(request.getContextPath() + "/login.html?authError="
-                + URLEncoder.encode(reason, "UTF-8"));
+        // Redirect to the OIDC login initiator rather than the error page.
+        // If the user still has a live KC session the re-authentication is seamless:
+        // KC issues a new token (with up-to-date group claims) and bounces them back
+        // to TC without a password prompt, transparently applying any permission changes.
+        String returnTo = request.getRequestURI();
+        String qs = request.getQueryString();
+        if (qs != null && !qs.isEmpty()) returnTo += "?" + qs;
+        response.sendRedirect(request.getContextPath() + OidcConstants.LOGIN_PATH
+                + "?redirectTo=" + URLEncoder.encode(returnTo, "UTF-8"));
         return false;
     }
 
