@@ -14,6 +14,11 @@
 #                       Override when Keycloak runs in Docker: TC_URL_FROM_KC=http://host.docker.internal:8111
 #   KC_REALM            Keycloak realm                 (default: master)
 #   TC_DATADIR          TC data directory              (default: servers/2025.11/.datadir, relative to this script)
+#   KC_SESSION_MAX_SECONDS
+#                       Keycloak SSO session max lifetime in seconds (default: 2592000 = 30 days)
+#                       Must be >= TeamCity's remember-me token lifetime so that Keycloak always has
+#                       an active session to terminate when a user is deleted, ensuring back-channel
+#                       logout is triggered. Match this to your TC "remember me" duration if changed.
 
 set -euo pipefail
 
@@ -30,6 +35,8 @@ KC_REALM="${KC_REALM:-master}"
 TC_DATADIR="${TC_DATADIR:-$SCRIPT_DIR/servers/2025.11/.datadir}"
 TC_CLIENT_ID="teamcity"
 TC_CONFIG_FILE="$TC_DATADIR/config/oidc-auth-plugin.json"
+# 30 days — matches TeamCity's default remember-me token lifetime
+KC_SESSION_MAX_SECONDS="${KC_SESSION_MAX_SECONDS:-2592000}"
 
 # ---- Helpers ---------------------------------------------------------------
 
@@ -134,6 +141,29 @@ CLIENT_SECRET=$(echo "$SECRET_RESPONSE" \
 
 info "Client secret obtained."
 
+# ---- Configure realm session lifetime --------------------------------------
+#
+# Back-channel logout is session-based: Keycloak only sends a logout_token for
+# sessions that are active at the moment of user deletion. If the KC session has
+# already expired while TeamCity's remember-me token is still valid, deleting the
+# user in KC will NOT trigger back-channel logout and the TC session will persist.
+#
+# Fix: keep KC's SSO session lifetime >= TC's remember-me lifetime so there is
+# always a live KC session to terminate whenever a user has a live TC session.
+
+info "Setting realm '$KC_REALM' SSO session max lifetime to ${KC_SESSION_MAX_SECONDS}s ..."
+REALM_PAYLOAD=$(python3 -c "import json; print(json.dumps({
+  'ssoSessionMaxLifespan': $KC_SESSION_MAX_SECONDS,
+  'ssoSessionIdleTimeout': $KC_SESSION_MAX_SECONDS
+}))")
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
+  -H "Authorization: Bearer $KC_TOKEN" \
+  -H "Content-Type: application/json" \
+  "$KC_URL/admin/realms/$KC_REALM" \
+  -d "$REALM_PAYLOAD")
+[[ "$HTTP_STATUS" == "204" ]] || error "Failed to update realm session settings (HTTP $HTTP_STATUS)"
+info "Realm session lifetime updated."
+
 # ---- Write plugin config file ----------------------------------------------
 
 info "Writing plugin config to $TC_CONFIG_FILE ..."
@@ -169,10 +199,11 @@ print(json.dumps(config, indent=2))
 info ""
 info "Integration configured successfully."
 info ""
-info "  Keycloak client : $TC_CLIENT_ID"
-info "  Issuer URL      : $KC_URL/realms/$KC_REALM"
-info "  Callback URL    : $TC_URL/app/oidc/callback"
-info "  Config file     : $TC_CONFIG_FILE"
+info "  Keycloak client      : $TC_CLIENT_ID"
+info "  Issuer URL           : $KC_URL/realms/$KC_REALM"
+info "  Callback URL         : $TC_URL/app/oidc/callback"
+info "  Config file          : $TC_CONFIG_FILE"
+info "  KC session max       : ${KC_SESSION_MAX_SECONDS}s (must be >= TC remember-me lifetime)"
 info ""
 info "To test: open $TC_URL/app/oidc/login in your browser."
 info "The plugin hot-reloads the config file — no TeamCity restart needed."

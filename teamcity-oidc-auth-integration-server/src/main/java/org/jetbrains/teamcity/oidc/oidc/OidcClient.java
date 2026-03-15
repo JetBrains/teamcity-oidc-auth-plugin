@@ -12,6 +12,7 @@ import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorage;
 
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -95,6 +96,26 @@ public class OidcClient {
     }
 
     /**
+     * Calls the token introspection endpoint (RFC 7662) and returns whether the token is active.
+     * Uses HTTP Basic authentication with the client credentials.
+     * Fails open: callers should treat an {@link OidcClientException} as "unknown" and allow the request.
+     */
+    public boolean introspectToken(
+            @NotNull String introspectionEndpoint,
+            @NotNull String accessToken,
+            @NotNull String clientId,
+            @NotNull String clientSecret) throws OidcClientException {
+        Loggers.SERVER.debug("OIDC: introspecting token at " + introspectionEndpoint);
+        Map<String, String> form = new LinkedHashMap<>();
+        form.put("token", accessToken);
+        form.put("token_type_hint", "access_token");
+        int timeout = settingsStorage.getSettings().getHttpTimeoutSeconds() * 1000;
+        IntrospectionResponse resp = doPostWithBasicAuth(
+                introspectionEndpoint, form, clientId, clientSecret, IntrospectionResponse.class, timeout);
+        return resp.active;
+    }
+
+    /**
      * Fetches the raw JWKS JSON string for ID token signature verification.
      */
     @NotNull
@@ -160,6 +181,36 @@ public class OidcClient {
         String body = bodyRef.get();
         if (body == null) throw new OidcClientException("Empty response from " + url);
         return body;
+    }
+
+    @NotNull
+    private <T> T doPostWithBasicAuth(@NotNull String url, @NotNull Map<String, String> formData,
+                                      @NotNull String username, @NotNull String password,
+                                      @NotNull Class<T> responseType, int timeoutMs) throws OidcClientException {
+        String credentials = Base64.getEncoder().encodeToString(
+                (username + ":" + password).getBytes(StandardCharsets.UTF_8));
+        AtomicReference<String> bodyRef = new AtomicReference<>();
+        AtomicReference<OidcClientException> errorRef = new AtomicReference<>();
+
+        HTTPRequestBuilder builder = buildRequest(url, timeoutMs);
+        builder.withMethod(HttpMethod.POST)
+               .withHeader("Authorization", "Basic " + credentials)
+               .withHeader("Accept", "application/json")
+               .withHeader("Content-Type", "application/x-www-form-urlencoded")
+               .withData(formData)
+               .onErrorResponse(response -> {
+                   int status = response.getStatusCode();
+                   String respBody = response.getBodyAsString(StandardCharsets.UTF_8.name());
+                   errorRef.set(new OidcClientException(
+                           "POST request failed with status " + status + " from " + url,
+                           status, extractIdpError(respBody), null));
+               })
+               .onSuccess(response ->
+                   bodyRef.set(response.getBodyAsString(StandardCharsets.UTF_8.name())));
+
+        executeRequest(builder, url);
+        if (errorRef.get() != null) throw errorRef.get();
+        return parseJson(bodyRef.get(), responseType, url);
     }
 
     @NotNull
@@ -236,6 +287,12 @@ public class OidcClient {
     }
 
     // ---- Inner types -------------------------------------------------------
+
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
+    private static final class IntrospectionResponse {
+        @com.fasterxml.jackson.annotation.JsonProperty("active")
+        boolean active;
+    }
 
     private static final class CachedDiscovery {
         final String issuerUrl;

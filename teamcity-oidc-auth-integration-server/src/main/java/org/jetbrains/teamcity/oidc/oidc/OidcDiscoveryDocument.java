@@ -24,6 +24,9 @@ public class OidcDiscoveryDocument {
     @JsonProperty("jwks_uri")
     private String jwksUri;
 
+    @JsonProperty("introspection_endpoint")
+    private String introspectionEndpoint;
+
     @JsonProperty("scopes_supported")
     private List<String> scopesSupported;
 
@@ -38,6 +41,7 @@ public class OidcDiscoveryDocument {
     public String getTokenEndpoint() { return tokenEndpoint; }
     public String getUserInfoEndpoint() { return userInfoEndpoint; }
     public String getJwksUri() { return jwksUri; }
+    public String getIntrospectionEndpoint() { return introspectionEndpoint; }
     public List<String> getScopesSupported() { return scopesSupported; }
     public List<String> getResponseTypesSupported() { return responseTypesSupported; }
     public List<String> getClaimsSupported() { return claimsSupported; }

@@ -8,10 +8,13 @@ import jetbrains.buildServer.controllers.interceptors.auth.util.HttpAuthUtil;
 import jetbrains.buildServer.groups.SUserGroup;
 import jetbrains.buildServer.groups.UserGroupManager;
 import jetbrains.buildServer.log.Loggers;
+import jetbrains.buildServer.auth.SessionModel;
+import jetbrains.buildServer.serverSide.TeamCityProperties;
+import jetbrains.buildServer.serverSide.SecurityContextEx;
 import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
 import jetbrains.buildServer.serverSide.auth.ServerPrincipal;
 import jetbrains.buildServer.users.SUser;
-import jetbrains.buildServer.users.UserModel;
+import jetbrains.buildServer.users.UserModelEx;
 import jetbrains.buildServer.users.impl.UserEx;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.annotations.NotNull;
@@ -31,13 +34,17 @@ import java.util.stream.Collectors;
 
 public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
 
+    private static final String INTROSPECTION_PROPERTY = "teamcity.oidc.auth.token.introspection.enabled";
+
     private final OidcPluginSettingsStorage settingsStorage;
     private final OidcClient oidcClient;
     private final OidcIdTokenValidator tokenValidator;
     private final OidcStateManager stateManager;
-    private final UserModel userModel;
+    private final UserModelEx userModel;
     private final UserGroupManager userGroupManager;
     private final RootUrlHolder rootUrlHolder;
+    private final SecurityContextEx securityContext;
+    private final SessionModel sessionModel;
 
     public OidcAuthenticationScheme(
             @NotNull LoginConfiguration loginConfiguration,
@@ -45,11 +52,13 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
             @NotNull OidcClient oidcClient,
             @NotNull OidcIdTokenValidator tokenValidator,
             @NotNull OidcStateManager stateManager,
-            @NotNull UserModel userModel,
+            @NotNull UserModelEx userModel,
             @NotNull UserGroupManager userGroupManager,
             @NotNull RootUrlHolder rootUrlHolder,
             @NotNull WebControllerManager webControllerManager,
-            @NotNull AuthorizationInterceptor authInterceptor) {
+            @NotNull AuthorizationInterceptor authInterceptor,
+            @NotNull SecurityContextEx securityContext,
+            @NotNull SessionModel sessionModel) {
         this.settingsStorage = settingsStorage;
         this.oidcClient = oidcClient;
         this.tokenValidator = tokenValidator;
@@ -57,6 +66,8 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         this.userModel = userModel;
         this.userGroupManager = userGroupManager;
         this.rootUrlHolder = rootUrlHolder;
+        this.securityContext = securityContext;
+        this.sessionModel = sessionModel;
 
         // The login initiator path must be accessible without authentication so unauthenticated
         // users can start the OIDC flow. The callback path must NOT be exempt — TC's auth
@@ -107,6 +118,10 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
 
         String code = request.getParameter("code");
         if (code == null || !request.getRequestURI().contains(OidcConstants.CALLBACK_PATH)) {
+            if (TeamCityProperties.getBoolean(INTROSPECTION_PROPERTY)) {
+                HttpAuthenticationResult introspectionResult = checkTokenIntrospection(request, response);
+                if (introspectionResult != null) return introspectionResult;
+            }
             return HttpAuthenticationResult.notApplicable();
         }
 
@@ -212,12 +227,96 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
 
         String sub = idTokenClaims.getSub();
         ((UserEx) user).setAttribute(OidcConstants.OIDC_SUB_ATTRIBUTE, sub);
+
+        // Store access token and user ID in session to support per-request token introspection.
+        // Note: this covers browser sessions only. Requests authenticated via remember-me tokens
+        // create a fresh session without these attributes, so introspection is not triggered for them.
+        if (tokenResponse.getAccessToken() != null) {
+            session.setAttribute(OidcConstants.SESSION_ACCESS_TOKEN, tokenResponse.getAccessToken());
+            session.setAttribute(OidcConstants.SESSION_USER_ID, user.getId());
+        }
+
         Loggers.AUTH.info("OIDC: authenticated user '" + username + "' (sub='" + sub + "', userId=" + user.getId() + ")");
         String redirectUrl = getPostLoginRedirect(session, request);
         return HttpAuthenticationResult.authenticated(
                 new ServerPrincipal(user.getRealm(), user.getUsername(), null,
                         settings.isCreateUsersAutomatically(), new HashMap<>()),
                 true).withRedirect(redirectUrl);
+    }
+
+    // ---- Token introspection -----------------------------------------------
+
+    /**
+     * Performs per-request token introspection when enabled via
+     * {@code teamcity.oidc.auth.token.introspection.enabled}.
+     *
+     * <p>Returns a non-null result only when the token is confirmed inactive, forcing
+     * re-authentication. Returns {@code null} (not applicable) in all other cases:
+     * no OIDC session, IdP unreachable (fail-open), or token still active.
+     *
+     * <p><b>Limitation:</b> only covers browser sessions where the access token was stored
+     * at login. Requests authenticated via remember-me tokens that arrived after the browser
+     * session expired create a fresh session without the stored token — introspection is
+     * not triggered for them. Use Keycloak session lifetime matching (option 1) as a
+     * complementary safeguard for that case.
+     */
+    @org.jetbrains.annotations.Nullable
+    private HttpAuthenticationResult checkTokenIntrospection(
+            @NotNull HttpServletRequest request,
+            @NotNull HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        if (session == null) return null;
+
+        String accessToken = (String) session.getAttribute(OidcConstants.SESSION_ACCESS_TOKEN);
+        Object userIdAttr = session.getAttribute(OidcConstants.SESSION_USER_ID);
+        if (accessToken == null || userIdAttr == null) return null;
+        long userId = (Long) userIdAttr;
+
+        OidcPluginSettings settings = settingsStorage.getSettings();
+        String introspectionEndpoint = resolveIntrospectionEndpoint(settings);
+        if (introspectionEndpoint == null) {
+            Loggers.AUTH.warn("OIDC token introspection: endpoint not available (check discovery or set introspectionEndpoint) — skipping");
+            return null; // fail open
+        }
+
+        boolean active;
+        try {
+            active = oidcClient.introspectToken(
+                    introspectionEndpoint, accessToken, settings.getClientId(), settings.getClientSecret());
+        } catch (OidcClientException e) {
+            Loggers.AUTH.warn("OIDC token introspection: IdP call failed (allowing request): " + e.getMessage());
+            return null; // fail open — IdP unreachable should not block the user
+        }
+
+        if (active) return null;
+
+        // Token is no longer active — terminate all sessions so remember-me is also cleared
+        Loggers.AUTH.info("OIDC token introspection: token inactive for userId=" + userId + ", terminating all sessions");
+        try {
+            SUser user = securityContext.runAsSystem(() -> userModel.findUserById(userId));
+            if (user != null) {
+                securityContext.runAs(user, () -> sessionModel.terminateSessionsByUserId(userId));
+            } else {
+                session.invalidate();
+            }
+        } catch (Throwable t) {
+            Loggers.AUTH.warn("OIDC token introspection: error terminating sessions for userId=" + userId + ": " + t.getMessage());
+            session.invalidate();
+        }
+        return fail(request, response, "Session revoked by identity provider — please log in again");
+    }
+
+    @org.jetbrains.annotations.Nullable
+    private String resolveIntrospectionEndpoint(@NotNull OidcPluginSettings settings) {
+        if (!settings.isDiscoveryEnabled()) {
+            return settings.getIntrospectionEndpoint(); // may be null if not configured
+        }
+        try {
+            return oidcClient.fetchDiscoveryDocument(settings.getIssuerUrl()).getIntrospectionEndpoint();
+        } catch (OidcClientException e) {
+            Loggers.AUTH.warn("OIDC token introspection: could not fetch discovery document: " + e.getMessage());
+            return null;
+        }
     }
 
     // ---- Helpers -----------------------------------------------------------

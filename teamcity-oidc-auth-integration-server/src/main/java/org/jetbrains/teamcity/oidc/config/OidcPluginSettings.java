@@ -31,6 +31,9 @@ public class OidcPluginSettings {
     /** JWKS endpoint URL — required if discoveryEnabled is false. */
     private String jwksUri;
 
+    /** Token introspection endpoint URL — optional, used when discoveryEnabled is false. */
+    private String introspectionEndpoint;
+
     /** OAuth 2.0 client ID. */
     private String clientId;
 
@@ -120,6 +123,9 @@ public class OidcPluginSettings {
 
     public String getJwksUri() { return jwksUri; }
     public void setJwksUri(String jwksUri) { this.jwksUri = jwksUri; }
+
+    public String getIntrospectionEndpoint() { return introspectionEndpoint; }
+    public void setIntrospectionEndpoint(String introspectionEndpoint) { this.introspectionEndpoint = introspectionEndpoint; }
 
     public String getClientId() { return clientId; }
     public void setClientId(String clientId) { this.clientId = clientId; }

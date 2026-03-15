@@ -1,13 +1,15 @@
 package org.jetbrains.teamcity.oidc.auth;
 
 import jetbrains.buildServer.RootUrlHolder;
+import jetbrains.buildServer.auth.SessionModel;
 import jetbrains.buildServer.controllers.AuthorizationInterceptor;
 import jetbrains.buildServer.controllers.interceptors.auth.HttpAuthenticationResult;
 import jetbrains.buildServer.groups.SUserGroup;
 import jetbrains.buildServer.groups.UserGroupManager;
+import jetbrains.buildServer.serverSide.SecurityContextEx;
 import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
 import jetbrains.buildServer.users.SUser;
-import jetbrains.buildServer.users.UserModel;
+import jetbrains.buildServer.users.UserModelEx;
 import jetbrains.buildServer.users.impl.UserEx;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.teamcity.oidc.InMemoryOidcPluginSettingsStorage;
@@ -40,7 +42,7 @@ public class OidcAuthenticationSchemeTest {
     private OidcClient mockClient;
     private OidcIdTokenValidator mockValidator;
     private OidcStateManager mockStateManager;
-    private UserModel mockUserModel;
+    private UserModelEx mockUserModel;
     private UserGroupManager mockGroupManager;
     private RootUrlHolder mockRootUrl;
     private UserEx mockUser;
@@ -66,7 +68,7 @@ public class OidcAuthenticationSchemeTest {
         mockClient    = mock(OidcClient.class);
         mockValidator = mock(OidcIdTokenValidator.class);
         mockStateManager = mock(OidcStateManager.class);
-        mockUserModel = mock(UserModel.class);
+        mockUserModel = mock(UserModelEx.class);
         mockGroupManager = mock(UserGroupManager.class);
         mockRootUrl   = mock(RootUrlHolder.class);
         mockUser      = mock(UserEx.class);
@@ -101,7 +103,8 @@ public class OidcAuthenticationSchemeTest {
         scheme = new OidcAuthenticationScheme(
                 mock(LoginConfiguration.class), settingsStorage, mockClient, mockValidator,
                 mockStateManager, mockUserModel, mockGroupManager, mockRootUrl,
-                mock(WebControllerManager.class), mock(AuthorizationInterceptor.class));
+                mock(WebControllerManager.class), mock(AuthorizationInterceptor.class),
+                mock(SecurityContextEx.class), mock(SessionModel.class));
     }
 
     private MockHttpServletRequest callbackRequest() {

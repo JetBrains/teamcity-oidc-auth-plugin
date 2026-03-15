@@ -30,6 +30,9 @@ public final class OidcConstants {
     public static final String SESSION_STATE        = "oidc.state";
     public static final String SESSION_NONCE        = "oidc.nonce";
     public static final String SESSION_REDIRECT_URL = "oidc.redirectUrl";
+    // Stored at login to support per-request token introspection (opt-in via feature flag)
+    public static final String SESSION_ACCESS_TOKEN = "oidc.access.token";
+    public static final String SESSION_USER_ID      = "oidc.user.id";
 
     // OIDC well-known discovery path suffix
     public static final String DISCOVERY_PATH = "/.well-known/openid-configuration";

@@ -69,11 +69,13 @@ public class OidcPluginConfiguration {
             @NotNull UserGroupManager userGroupManager,
             @NotNull RootUrlHolder rootUrlHolder,
             @NotNull WebControllerManager webControllerManager,
-            @NotNull AuthorizationInterceptor authInterceptor) {
+            @NotNull AuthorizationInterceptor authInterceptor,
+            @NotNull SecurityContextEx securityContext,
+            @NotNull SessionModel sessionModel) {
         OidcAuthenticationScheme scheme = new OidcAuthenticationScheme(
                 loginConfiguration, settingsStorage, oidcClient, tokenValidator, stateManager,
                 userModel, userGroupManager, rootUrlHolder,
-                webControllerManager, authInterceptor);
+                webControllerManager, authInterceptor, securityContext, sessionModel);
         loginConfiguration.registerAuthModuleType(scheme);
         return scheme;
     }
