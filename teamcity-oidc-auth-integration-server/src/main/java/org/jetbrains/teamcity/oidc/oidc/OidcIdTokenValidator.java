@@ -1,14 +1,8 @@
 package org.jetbrains.teamcity.oidc.oidc;
 
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.ECDSAVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import jetbrains.buildServer.log.Loggers;
@@ -88,8 +82,7 @@ public class OidcIdTokenValidator {
 
     private void verifySignature(SignedJWT jwt, String jwksUri) throws OidcAuthException {
         JWKSet jwkSet = fetchJwkSet(jwksUri);
-        JWSHeader header = jwt.getHeader();
-        String kid = header.getKeyID();
+        String kid = jwt.getHeader().getKeyID();
 
         JWK key = selectKey(jwkSet, kid);
 
@@ -106,8 +99,7 @@ public class OidcIdTokenValidator {
         }
 
         try {
-            JWSVerifier verifier = buildVerifier(key, header.getAlgorithm());
-            if (!jwt.verify(verifier)) {
+            if (!JwtVerifier.verify(jwt, key)) {
                 throw new OidcAuthException("ID token signature verification failed");
             }
         } catch (OidcAuthException e) {
@@ -135,15 +127,6 @@ public class OidcIdTokenValidator {
         }
         List<JWK> keys = jwkSet.getKeys();
         return keys.isEmpty() ? null : keys.get(0);
-    }
-
-    private JWSVerifier buildVerifier(JWK key, JWSAlgorithm algorithm) throws Exception {
-        if (key instanceof RSAKey) {
-            return new RSASSAVerifier((RSAKey) key);
-        } else if (key instanceof ECKey) {
-            return new ECDSAVerifier((ECKey) key);
-        }
-        throw new OidcAuthException("Unsupported JWK key type: " + key.getKeyType());
     }
 
     private void checkIssuer(JWTClaimsSet claims, String expected) throws OidcAuthException {

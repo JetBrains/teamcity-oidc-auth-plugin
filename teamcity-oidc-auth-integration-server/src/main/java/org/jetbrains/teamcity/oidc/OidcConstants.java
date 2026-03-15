@@ -13,8 +13,15 @@ public final class OidcConstants {
     public static final String AUTH_SCHEME_DESCRIPTION = "Authenticate using an external OpenID Connect identity provider";
 
     // URL paths registered by this plugin
-    public static final String LOGIN_PATH    = "/app/oidc/login";
-    public static final String CALLBACK_PATH = "/app/oidc/callback";
+    public static final String LOGIN_PATH             = "/app/oidc/login";
+    public static final String CALLBACK_PATH          = "/app/oidc/callback";
+    public static final String BACKCHANNEL_LOGOUT_PATH = "/app/oidc/backchannel-logout";
+
+    // OIDC Back-Channel Logout event identifier (RFC 8935)
+    public static final String BACKCHANNEL_LOGOUT_EVENT = "http://schemas.openid.net/event/backchannel-logout";
+
+    // UserEx attribute key used to persist the OIDC subject identifier on the TC user record
+    public static final String OIDC_SUB_ATTRIBUTE = "oidc.sub";
 
     // Config file name (relative to TeamCity config directory)
     public static final String CONFIG_FILE_NAME = "oidc-auth-plugin.json";

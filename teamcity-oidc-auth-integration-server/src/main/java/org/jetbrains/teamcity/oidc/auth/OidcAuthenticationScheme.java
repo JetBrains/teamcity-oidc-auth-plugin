@@ -12,6 +12,7 @@ import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
 import jetbrains.buildServer.serverSide.auth.ServerPrincipal;
 import jetbrains.buildServer.users.SUser;
 import jetbrains.buildServer.users.UserModel;
+import jetbrains.buildServer.users.impl.UserEx;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.teamcity.oidc.OidcConstants;
@@ -61,7 +62,9 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         // users can start the OIDC flow. The callback path must NOT be exempt — TC's auth
         // interceptor only calls processAuthenticationRequest for paths that require auth, and
         // that method is where the code-exchange and token validation happen.
+        // The back-channel logout endpoint is called server-to-server by the IdP without a session.
         authInterceptor.addPathNotRequiringAuth(OidcConstants.LOGIN_PATH);
+        authInterceptor.addPathNotRequiringAuth(OidcConstants.BACKCHANNEL_LOGOUT_PATH);
     }
 
     @NotNull
@@ -207,7 +210,9 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
             syncGroups(user, groups, settings.isRemoveUnassignedGroups());
         }
 
-        Loggers.AUTH.info("OIDC: authenticated user '" + username + "'");
+        String sub = idTokenClaims.getSub();
+        ((UserEx) user).setAttribute(OidcConstants.OIDC_SUB_ATTRIBUTE, sub);
+        Loggers.AUTH.info("OIDC: authenticated user '" + username + "' (sub='" + sub + "', userId=" + user.getId() + ")");
         String redirectUrl = getPostLoginRedirect(session, request);
         return HttpAuthenticationResult.authenticated(
                 new ServerPrincipal(user.getRealm(), user.getUsername(), null,

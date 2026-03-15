@@ -8,10 +8,12 @@
 #   KC_USER=admin   KC_PASS=admin
 #
 # Environment variable overrides (take precedence over positional args):
-#   KC_URL      Keycloak base URL   (default: http://localhost:8080)
-#   TC_URL      TeamCity base URL   (default: http://localhost:8111)
-#   KC_REALM    Keycloak realm      (default: master)
-#   TC_DATADIR  TC data directory   (default: servers/2025.11/.datadir, relative to this script)
+#   KC_URL              Keycloak base URL              (default: http://localhost:8080)
+#   TC_URL              TeamCity base URL              (default: http://localhost:8111)
+#   TC_URL_FROM_KC      TC URL as seen from Keycloak   (default: same as TC_URL)
+#                       Override when Keycloak runs in Docker: TC_URL_FROM_KC=http://host.docker.internal:8111
+#   KC_REALM            Keycloak realm                 (default: master)
+#   TC_DATADIR          TC data directory              (default: servers/2025.11/.datadir, relative to this script)
 
 set -euo pipefail
 
@@ -23,6 +25,7 @@ KC_USER="${1:-admin}"
 KC_PASS="${2:-admin}"
 KC_URL="${KC_URL:-http://localhost:8080}"
 TC_URL="${TC_URL:-http://localhost:8111}"
+TC_URL_FROM_KC="${TC_URL_FROM_KC:-$TC_URL}"
 KC_REALM="${KC_REALM:-master}"
 TC_DATADIR="${TC_DATADIR:-$SCRIPT_DIR/servers/2025.11/.datadir}"
 TC_CLIENT_ID="teamcity"
@@ -86,7 +89,11 @@ print(json.dumps({
   'directAccessGrantsEnabled': False,
   'redirectUris': ['$TC_URL/app/oidc/callback'],
   'webOrigins': ['$TC_URL'],
-  'protocol': 'openid-connect'
+  'protocol': 'openid-connect',
+  'attributes': {
+    'backchannel.logout.url': '$TC_URL_FROM_KC/app/oidc/backchannel-logout',
+    'backchannel.logout.session.required': 'true'
+  }
 }))")
 
 if [[ "$CLIENT_COUNT" -eq 0 ]]; then

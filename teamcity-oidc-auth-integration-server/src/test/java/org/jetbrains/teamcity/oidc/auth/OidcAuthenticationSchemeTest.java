@@ -8,6 +8,7 @@ import jetbrains.buildServer.groups.UserGroupManager;
 import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
 import jetbrains.buildServer.users.SUser;
 import jetbrains.buildServer.users.UserModel;
+import jetbrains.buildServer.users.impl.UserEx;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.teamcity.oidc.InMemoryOidcPluginSettingsStorage;
 import org.jetbrains.teamcity.oidc.config.OidcClaimMappingSettings;
@@ -42,7 +43,7 @@ public class OidcAuthenticationSchemeTest {
     private UserModel mockUserModel;
     private UserGroupManager mockGroupManager;
     private RootUrlHolder mockRootUrl;
-    private SUser mockUser;
+    private UserEx mockUser;
     private OidcIdTokenClaims validClaims;
     private OidcTokenResponse validTokenResponse;
     private OidcAuthenticationScheme scheme;
@@ -68,7 +69,7 @@ public class OidcAuthenticationSchemeTest {
         mockUserModel = mock(UserModel.class);
         mockGroupManager = mock(UserGroupManager.class);
         mockRootUrl   = mock(RootUrlHolder.class);
-        mockUser      = mock(SUser.class);
+        mockUser      = mock(UserEx.class);
 
         when(mockRootUrl.getRootUrl()).thenReturn("http://localhost:8111");
         when(mockUser.getUsername()).thenReturn(USERNAME);

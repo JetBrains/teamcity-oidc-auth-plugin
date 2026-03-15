@@ -6,8 +6,10 @@ import jetbrains.buildServer.groups.UserGroupManager;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.ServerPaths;
 import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
-import jetbrains.buildServer.users.UserModel;
+import jetbrains.buildServer.serverSide.SecurityContextEx;
+import jetbrains.buildServer.users.UserModelEx;
 import jetbrains.buildServer.util.HTTPRequestBuilder;
+import jetbrains.buildServer.auth.SessionModel;
 import jetbrains.buildServer.web.openapi.PagePlaces;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
@@ -18,6 +20,7 @@ import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorage;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorageImpl;
 import org.jetbrains.teamcity.oidc.oidc.OidcClient;
 import org.jetbrains.teamcity.oidc.oidc.OidcIdTokenValidator;
+import org.jetbrains.teamcity.oidc.web.OidcBackChannelLogoutController;
 import org.jetbrains.teamcity.oidc.web.OidcCallbackController;
 import org.jetbrains.teamcity.oidc.web.OidcLoginController;
 import org.jetbrains.teamcity.oidc.web.OidcLoginPageExtension;
@@ -62,14 +65,15 @@ public class OidcPluginConfiguration {
             @NotNull OidcClient oidcClient,
             @NotNull OidcIdTokenValidator tokenValidator,
             @NotNull OidcStateManager stateManager,
-            @NotNull UserModel userModel,
+            @NotNull UserModelEx userModel,
             @NotNull UserGroupManager userGroupManager,
             @NotNull RootUrlHolder rootUrlHolder,
             @NotNull WebControllerManager webControllerManager,
             @NotNull AuthorizationInterceptor authInterceptor) {
         OidcAuthenticationScheme scheme = new OidcAuthenticationScheme(
                 loginConfiguration, settingsStorage, oidcClient, tokenValidator, stateManager,
-                userModel, userGroupManager, rootUrlHolder, webControllerManager, authInterceptor);
+                userModel, userGroupManager, rootUrlHolder,
+                webControllerManager, authInterceptor);
         loginConfiguration.registerAuthModuleType(scheme);
         return scheme;
     }
@@ -90,6 +94,19 @@ public class OidcPluginConfiguration {
             @NotNull SBuildServer server,
             @NotNull WebControllerManager webControllerManager) {
         return new OidcCallbackController(server, webControllerManager);
+    }
+
+    @Bean
+    public OidcBackChannelLogoutController oidcBackChannelLogoutController(
+            @NotNull SBuildServer server,
+            @NotNull WebControllerManager webControllerManager,
+            @NotNull OidcPluginSettingsStorage settingsStorage,
+            @NotNull OidcClient oidcClient,
+            @NotNull UserModelEx userModel,
+            @NotNull SecurityContextEx securityContext,
+            @NotNull SessionModel sessionModel) {
+        return new OidcBackChannelLogoutController(server, webControllerManager,
+                settingsStorage, oidcClient, userModel, securityContext, sessionModel);
     }
 
     @Bean
