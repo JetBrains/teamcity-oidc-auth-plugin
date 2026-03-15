@@ -113,9 +113,10 @@ public class OidcTokenIntrospectionInterceptor extends SkippableInterceptor {
         // If the user still has a live KC session the re-authentication is seamless:
         // KC issues a new token (with up-to-date group claims) and bounces them back
         // to TC without a password prompt, transparently applying any permission changes.
-        String returnTo = request.getRequestURI();
+        // Strip CRLF to prevent HTTP response splitting before embedding in the redirect URL.
+        String returnTo = request.getRequestURI().replaceAll("[\r\n]", "");
         String qs = request.getQueryString();
-        if (qs != null && !qs.isEmpty()) returnTo += "?" + qs;
+        if (qs != null && !qs.isEmpty()) returnTo += "?" + qs.replaceAll("[\r\n]", "");
         response.sendRedirect(request.getContextPath() + OidcConstants.LOGIN_PATH
                 + "?redirectTo=" + URLEncoder.encode(returnTo, "UTF-8"));
         return false;

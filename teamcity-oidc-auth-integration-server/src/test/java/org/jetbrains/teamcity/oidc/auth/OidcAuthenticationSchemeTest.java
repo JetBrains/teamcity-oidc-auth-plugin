@@ -6,8 +6,9 @@ import jetbrains.buildServer.controllers.interceptors.auth.HttpAuthenticationRes
 import jetbrains.buildServer.groups.SUserGroup;
 import jetbrains.buildServer.groups.UserGroupManager;
 import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
-import jetbrains.buildServer.users.SUser;
 import jetbrains.buildServer.users.UserModel;
+import jetbrains.buildServer.users.UserModelEx;
+import jetbrains.buildServer.users.impl.NewUserAccount;
 import jetbrains.buildServer.users.impl.UserEx;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.teamcity.oidc.InMemoryOidcPluginSettingsStorage;
@@ -40,7 +41,7 @@ public class OidcAuthenticationSchemeTest {
     private OidcClient mockClient;
     private OidcIdTokenValidator mockValidator;
     private OidcStateManager mockStateManager;
-    private UserModel mockUserModel;
+    private UserModelEx mockUserModel;
     private UserGroupManager mockGroupManager;
     private RootUrlHolder mockRootUrl;
     private UserEx mockUser;
@@ -66,7 +67,7 @@ public class OidcAuthenticationSchemeTest {
         mockClient    = mock(OidcClient.class);
         mockValidator = mock(OidcIdTokenValidator.class);
         mockStateManager = mock(OidcStateManager.class);
-        mockUserModel = mock(UserModel.class);
+        mockUserModel = mock(UserModelEx.class);
         mockGroupManager = mock(UserGroupManager.class);
         mockRootUrl   = mock(RootUrlHolder.class);
         mockUser      = mock(UserEx.class);
@@ -99,9 +100,9 @@ public class OidcAuthenticationSchemeTest {
         when(mockStateManager.consumeNonce(any())).thenReturn(NONCE);
 
         scheme = new OidcAuthenticationScheme(
-                mock(LoginConfiguration.class), settingsStorage, mockClient, mockValidator,
+                settingsStorage, mockClient, mockValidator,
                 mockStateManager, mockUserModel, mockGroupManager, mockRootUrl,
-                mock(WebControllerManager.class), mock(AuthorizationInterceptor.class));
+                mock(AuthorizationInterceptor.class));
     }
 
     private MockHttpServletRequest callbackRequest() {
@@ -130,20 +131,23 @@ public class OidcAuthenticationSchemeTest {
         HttpAuthenticationResult result = scheme.processAuthenticationRequest(callbackRequest(), new MockHttpServletResponse(), new HashMap<>());
 
         assertEquals(HttpAuthenticationResult.Type.UNAUTHENTICATED, result.getType());
-        verify(mockUserModel, never()).createUserAccount(any(), any());
+        verify(mockUserModel, never()).createUserAccount(any(NewUserAccount.class));
     }
 
     @Test
     public void unknownUserWithAutoCreateEnabled_isCreated() throws Exception {
         settings.setCreateUsersAutomatically(true);
         when(mockUserModel.findUserAccount(null, USERNAME)).thenReturn(null);
-        when(mockUserModel.createUserAccount(null, USERNAME)).thenReturn(mockUser);
+        when(mockUserModel.createUserAccount(any(NewUserAccount.class))).thenReturn(mockUser);
 
         HttpAuthenticationResult result = scheme.processAuthenticationRequest(callbackRequest(), new MockHttpServletResponse(), new HashMap<>());
 
         assertEquals(HttpAuthenticationResult.Type.AUTHENTICATED, result.getType());
-        verify(mockUserModel).createUserAccount(null, USERNAME);
-        verify(mockUser).updateUserAccount(eq(USERNAME), any(), eq(EMAIL));
+        verify(mockUserModel).createUserAccount(argThat(account ->
+                USERNAME.equals(account.getUsername())
+                        && "Test User".equals(account.getName())
+                        && EMAIL.equals(account.getEmail())));
+        verify(mockUser, never()).updateUserAccount(any(), any(), any());
     }
 
     @Test

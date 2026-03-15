@@ -8,13 +8,14 @@ import jetbrains.buildServer.controllers.interceptors.auth.util.HttpAuthUtil;
 import jetbrains.buildServer.groups.SUserGroup;
 import jetbrains.buildServer.groups.UserGroupManager;
 import jetbrains.buildServer.log.Loggers;
-import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
 import jetbrains.buildServer.serverSide.auth.ServerPrincipal;
 import jetbrains.buildServer.users.SUser;
 import jetbrains.buildServer.users.UserModel;
+import jetbrains.buildServer.users.UserModelEx;
+import jetbrains.buildServer.users.impl.NewUserAccount;
 import jetbrains.buildServer.users.impl.UserEx;
-import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.teamcity.oidc.OidcConstants;
 import org.jetbrains.teamcity.oidc.config.OidcClaimMappingSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
@@ -35,20 +36,18 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
     private final OidcClient oidcClient;
     private final OidcIdTokenValidator tokenValidator;
     private final OidcStateManager stateManager;
-    private final UserModel userModel;
+    private final UserModelEx userModel;
     private final UserGroupManager userGroupManager;
     private final RootUrlHolder rootUrlHolder;
 
     public OidcAuthenticationScheme(
-            @NotNull LoginConfiguration loginConfiguration,
             @NotNull OidcPluginSettingsStorage settingsStorage,
             @NotNull OidcClient oidcClient,
             @NotNull OidcIdTokenValidator tokenValidator,
             @NotNull OidcStateManager stateManager,
-            @NotNull UserModel userModel,
+            @NotNull UserModelEx userModel,
             @NotNull UserGroupManager userGroupManager,
             @NotNull RootUrlHolder rootUrlHolder,
-            @NotNull WebControllerManager webControllerManager,
             @NotNull AuthorizationInterceptor authInterceptor) {
         this.settingsStorage = settingsStorage;
         this.oidcClient = oidcClient;
@@ -63,8 +62,8 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         // interceptor only calls processAuthenticationRequest for paths that require auth, and
         // that method is where the code-exchange and token validation happen.
         // The back-channel logout endpoint is called server-to-server by the IdP without a session.
-        authInterceptor.addPathNotRequiringAuth(OidcConstants.LOGIN_PATH);
-        authInterceptor.addPathNotRequiringAuth(OidcConstants.BACKCHANNEL_LOGOUT_PATH);
+        authInterceptor.addPathNotRequiringAuth(OidcAuthenticationScheme.class, OidcConstants.LOGIN_PATH);
+        authInterceptor.addPathNotRequiringAuth(OidcAuthenticationScheme.class, OidcConstants.BACKCHANNEL_LOGOUT_PATH);
     }
 
     @NotNull
@@ -89,7 +88,7 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         return !isBlank(s.getIssuerUrl()) && !isBlank(s.getClientId());
     }
 
-    private static boolean isBlank(@org.jetbrains.annotations.Nullable String s) {
+    private static boolean isBlank(@Nullable String s) {
         return s == null || s.trim().isEmpty();
     }
 
@@ -113,7 +112,7 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         Loggers.AUTH.debug("OIDC: processing callback for " + request.getRequestURI());
 
         try {
-            return doProcessCallback(request, response, code);
+            return doProcessCallback(request, code);
         } catch (OidcAuthException e) {
             return fail(request, response, e.getMessage());
         } catch (OidcClientException e) {
@@ -130,8 +129,7 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
     @NotNull
     private HttpAuthenticationResult doProcessCallback(
             @NotNull HttpServletRequest request,
-            @NotNull HttpServletResponse response,
-            @NotNull String code) throws OidcAuthException, OidcClientException, IOException {
+            @NotNull String code) throws OidcAuthException, OidcClientException {
 
         OidcPluginSettings settings = settingsStorage.getSettings();
 
@@ -194,11 +192,8 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         SUser user = userModel.findUserAccount(null, username);
         if (user == null && settings.isCreateUsersAutomatically()) {
             Loggers.AUTH.info("OIDC: auto-creating user '" + username + "'");
-            user = userModel.createUserAccount(null, username);
-            if (user != null) {
-                String displayName = resolveClaim(settings.getDisplayNameClaim(), idTokenClaims, userInfo);
-                user.updateUserAccount(username, displayName, email);
-            }
+            String displayName = resolveClaim(settings.getDisplayNameClaim(), idTokenClaims, userInfo);
+            user = userModel.createUserAccount(new NewUserAccount(username, displayName, email, null, Collections.emptyMap()));
         }
         if (user == null) {
             throw new OidcAuthException("User '" + username + "' not found and auto-creation is disabled");
@@ -246,7 +241,7 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         return oidcClient.fetchDiscoveryDocument(settings.getIssuerUrl()).getJwksUri();
     }
 
-    @org.jetbrains.annotations.Nullable
+    @Nullable
     private String resolveUserInfoEndpoint(@NotNull OidcPluginSettings settings) throws OidcClientException {
         if (!settings.isDiscoveryEnabled()) {
             return settings.getUserInfoEndpoint();
@@ -265,17 +260,17 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         return base + OidcConstants.CALLBACK_PATH;
     }
 
-    @org.jetbrains.annotations.Nullable
+    @Nullable
     private String resolveUsername(@NotNull OidcPluginSettings settings,
                                    @NotNull OidcIdTokenClaims claims,
-                                   @org.jetbrains.annotations.Nullable OidcUserInfo userInfo) {
+                                   @Nullable OidcUserInfo userInfo) {
         return resolveClaim(settings.getUsernameClaim(), claims, userInfo);
     }
 
-    @org.jetbrains.annotations.Nullable
+    @Nullable
     private String resolveClaim(@NotNull OidcClaimMappingSettings mapping,
                                 @NotNull OidcIdTokenClaims claims,
-                                @org.jetbrains.annotations.Nullable OidcUserInfo userInfo) {
+                                @Nullable OidcUserInfo userInfo) {
         switch (mapping.getMappingType()) {
             case SUB:
                 return claims.getSub();
@@ -311,7 +306,7 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
     @NotNull
     private List<String> resolveGroups(@NotNull OidcPluginSettings settings,
                                        @NotNull OidcIdTokenClaims claims,
-                                       @org.jetbrains.annotations.Nullable OidcUserInfo userInfo) {
+                                       @Nullable OidcUserInfo userInfo) {
         String claimName = settings.getGroupsClaimName();
         Object raw = claims.getRaw().get(claimName);
         if (raw == null && userInfo != null) raw = userInfo.getRaw().get(claimName);
