@@ -124,12 +124,58 @@ else
   info "Client updated."
 fi
 
-# ---- Get/generate client secret --------------------------------------------
+# ---- Add group membership mapper to client ---------------------------------
+#
+# Keycloak does not include groups in tokens by default.
+# This mapper adds a "groups" claim (leaf name only, not full path) to the ID token
+# so the plugin can sync group membership from the token.
 
 CLIENT_UUID=$(curl -sf \
   -H "Authorization: Bearer $KC_TOKEN" \
   "$KC_URL/admin/realms/$KC_REALM/clients?clientId=$TC_CLIENT_ID" \
   | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
+
+info "Configuring group membership mapper on client '$TC_CLIENT_ID' ..."
+EXISTING_MAPPERS=$(curl -sf \
+  -H "Authorization: Bearer $KC_TOKEN" \
+  "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/protocol-mappers/models")
+MAPPER_EXISTS=$(echo "$EXISTING_MAPPERS" \
+  | python3 -c "import sys,json; ms=json.load(sys.stdin); print(any(m.get('name')=='groups' for m in ms))")
+
+MAPPER_PAYLOAD=$(python3 -c "import json; print(json.dumps({
+  'name': 'groups',
+  'protocol': 'openid-connect',
+  'protocolMapper': 'oidc-group-membership-mapper',
+  'config': {
+    'full.path': 'false',
+    'id.token.claim': 'true',
+    'access.token.claim': 'true',
+    'userinfo.token.claim': 'true',
+    'claim.name': 'groups'
+  }
+}))")
+
+if [[ "$MAPPER_EXISTS" == "False" ]]; then
+  HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+    -H "Authorization: Bearer $KC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/protocol-mappers/models" \
+    -d "$MAPPER_PAYLOAD")
+  [[ "$HTTP_STATUS" == "201" ]] || error "Failed to create group membership mapper (HTTP $HTTP_STATUS)"
+  info "Group membership mapper created."
+else
+  MAPPER_ID=$(echo "$EXISTING_MAPPERS" \
+    | python3 -c "import sys,json; ms=json.load(sys.stdin); print(next(m['id'] for m in ms if m.get('name')=='groups'))")
+  HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
+    -H "Authorization: Bearer $KC_TOKEN" \
+    -H "Content-Type: application/json" \
+    "$KC_URL/admin/realms/$KC_REALM/clients/$CLIENT_UUID/protocol-mappers/models/$MAPPER_ID" \
+    -d "$(echo "$MAPPER_PAYLOAD" | python3 -c "import sys,json; d=json.load(sys.stdin); d['id']='$MAPPER_ID'; print(json.dumps(d))")")
+  [[ "$HTTP_STATUS" == "204" ]] || error "Failed to update group membership mapper (HTTP $HTTP_STATUS)"
+  info "Group membership mapper updated."
+fi
+
+# ---- Get/generate client secret --------------------------------------------
 
 info "Generating client secret ..."
 SECRET_RESPONSE=$(curl -sf -X POST \
@@ -182,7 +228,7 @@ config = {
   'callbackBaseUrl': None,
   'createUsersAutomatically': True,
   'allowedEmailDomains': [],
-  'assignGroups': False,
+  'assignGroups': True,
   'removeUnassignedGroups': False,
   'groupsClaimName': 'groups',
   'usernameClaim': {'mappingType': 'CLAIM', 'claimName': 'preferred_username'},

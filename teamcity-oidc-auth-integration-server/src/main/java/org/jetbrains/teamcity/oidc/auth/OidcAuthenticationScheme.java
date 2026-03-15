@@ -320,7 +320,7 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         if (raw instanceof List) {
             @SuppressWarnings("unchecked")
             List<Object> list = (List<Object>) raw;
-            return list.stream().filter(Objects::nonNull).map(Object::toString).collect(Collectors.toList());
+            return list.stream().filter(Objects::nonNull).map(Object::toString).map(this::extractGroupName).collect(Collectors.toList());
         }
         // Handle space- or comma-separated string
         String str = raw.toString().trim();
@@ -328,7 +328,19 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         return Arrays.stream(str.split("[,\\s]+"))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
+                .map(this::extractGroupName)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Extracts the leaf name from a group path.
+     * Keycloak includes groups as full paths (e.g. {@code /org/subteam/test_group});
+     * we only match against the last segment so TC group keys don't need to encode the full path.
+     */
+    @NotNull
+    private String extractGroupName(@NotNull String groupPath) {
+        int slash = groupPath.lastIndexOf('/');
+        return slash >= 0 ? groupPath.substring(slash + 1) : groupPath;
     }
 
     private void syncGroups(@NotNull SUser user, @NotNull List<String> idpGroups, boolean removeUnassigned) {
