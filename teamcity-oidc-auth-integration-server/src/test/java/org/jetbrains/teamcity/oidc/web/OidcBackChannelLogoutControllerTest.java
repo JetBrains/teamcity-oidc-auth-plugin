@@ -7,6 +7,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import jetbrains.buildServer.controllers.AuthorizationInterceptor;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.SecurityContextEx;
 import jetbrains.buildServer.auth.SessionModel;
@@ -102,7 +103,8 @@ public class OidcBackChannelLogoutControllerTest {
                 mockClient,
                 mockUserModel,
                 mockSecurityContext,
-                mockSessionModel);
+                mockSessionModel,
+                mock(AuthorizationInterceptor.class));
     }
 
     @SafeVarargs

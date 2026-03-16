@@ -1,0 +1,30 @@
+examples/*
+.idea/*
+*.iml
+target/
+*/target/
+all.sh
+rel.sh
+start.sh
+stop.sh
+servers
+servers/**
+**/.project
+**/.classpath
+**/.settings
+**/test-output/
+repository/lib
+*.zip
+.DS_Store
+.flattened-pom.xml
+
+# Sensitive config (never commit real credentials)
+oidc-auth-plugin.json
+
+# Node / frontend (if added later)
+node_modules/
+dist/
+npm-debug.log*
+
+# Logs
+*.log

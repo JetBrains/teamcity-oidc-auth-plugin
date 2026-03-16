@@ -8,9 +8,9 @@ import jetbrains.buildServer.controllers.interceptors.auth.util.HttpAuthUtil;
 import jetbrains.buildServer.groups.SUserGroup;
 import jetbrains.buildServer.groups.UserGroupManager;
 import jetbrains.buildServer.log.Loggers;
+import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
 import jetbrains.buildServer.serverSide.auth.ServerPrincipal;
 import jetbrains.buildServer.users.SUser;
-import jetbrains.buildServer.users.UserModel;
 import jetbrains.buildServer.users.UserModelEx;
 import jetbrains.buildServer.users.impl.NewUserAccount;
 import jetbrains.buildServer.users.impl.UserEx;
@@ -41,14 +41,14 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
     private final RootUrlHolder rootUrlHolder;
 
     public OidcAuthenticationScheme(
+            @NotNull LoginConfiguration loginConfiguration,
             @NotNull OidcPluginSettingsStorage settingsStorage,
             @NotNull OidcClient oidcClient,
             @NotNull OidcIdTokenValidator tokenValidator,
             @NotNull OidcStateManager stateManager,
             @NotNull UserModelEx userModel,
             @NotNull UserGroupManager userGroupManager,
-            @NotNull RootUrlHolder rootUrlHolder,
-            @NotNull AuthorizationInterceptor authInterceptor) {
+            @NotNull RootUrlHolder rootUrlHolder) {
         this.settingsStorage = settingsStorage;
         this.oidcClient = oidcClient;
         this.tokenValidator = tokenValidator;
@@ -57,13 +57,7 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         this.userGroupManager = userGroupManager;
         this.rootUrlHolder = rootUrlHolder;
 
-        // The login initiator path must be accessible without authentication so unauthenticated
-        // users can start the OIDC flow. The callback path must NOT be exempt — TC's auth
-        // interceptor only calls processAuthenticationRequest for paths that require auth, and
-        // that method is where the code-exchange and token validation happen.
-        // The back-channel logout endpoint is called server-to-server by the IdP without a session.
-        authInterceptor.addPathNotRequiringAuth(OidcAuthenticationScheme.class, OidcConstants.LOGIN_PATH);
-        authInterceptor.addPathNotRequiringAuth(OidcAuthenticationScheme.class, OidcConstants.BACKCHANNEL_LOGOUT_PATH);
+        loginConfiguration.registerAuthModuleType(this);
     }
 
     @NotNull

@@ -4,6 +4,7 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import jetbrains.buildServer.controllers.AuthorizationInterceptor;
 import jetbrains.buildServer.controllers.BaseController;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.SBuildServer;
@@ -15,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import jetbrains.buildServer.users.SUser;
 import jetbrains.buildServer.users.UserModelEx;
 import org.jetbrains.teamcity.oidc.OidcConstants;
+import org.jetbrains.teamcity.oidc.auth.OidcAuthenticationScheme;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorage;
 import org.jetbrains.teamcity.oidc.oidc.JwtVerifier;
@@ -51,7 +53,8 @@ public class OidcBackChannelLogoutController extends BaseController {
             @NotNull OidcClient oidcClient,
             @NotNull UserModelEx userModel,
             @NotNull SecurityContextEx securityContext,
-            @NotNull SessionModel sessionModel) {
+            @NotNull SessionModel sessionModel,
+            @NotNull AuthorizationInterceptor authInterceptor) {
         super(server);
         this.settingsStorage = settingsStorage;
         this.oidcClient = oidcClient;
@@ -59,6 +62,8 @@ public class OidcBackChannelLogoutController extends BaseController {
         this.securityContext = securityContext;
         this.sessionModel = sessionModel;
         webControllerManager.registerController(OidcConstants.BACKCHANNEL_LOGOUT_PATH, this);
+
+        authInterceptor.addPathNotRequiringAuth(OidcAuthenticationScheme.class, OidcConstants.BACKCHANNEL_LOGOUT_PATH);
     }
 
     @Nullable

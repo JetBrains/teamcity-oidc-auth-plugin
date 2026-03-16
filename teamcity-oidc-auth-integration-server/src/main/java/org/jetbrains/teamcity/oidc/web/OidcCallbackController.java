@@ -7,6 +7,7 @@ import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.teamcity.oidc.OidcConstants;
+import org.jetbrains.teamcity.oidc.RedirectUtil;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
@@ -39,9 +40,12 @@ public class OidcCallbackController extends BaseController {
     protected ModelAndView doHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) throws Exception {
         String error = request.getParameter("error");
         if (error != null) {
+            String sanitizedError = RedirectUtil.stripCrlf(error);
             String description = request.getParameter("error_description");
-            String message = description != null && !description.isEmpty() ? description : error;
-            Loggers.AUTH.warn("OIDC: IdP returned error: " + error + " — " + description);
+            String sanitizedDescription = description != null ? RedirectUtil.stripCrlf(description) : null;
+            String message = sanitizedDescription != null && !sanitizedDescription.isEmpty()
+                    ? sanitizedDescription : sanitizedError;
+            Loggers.AUTH.warn("OIDC: IdP returned error: " + sanitizedError + " — " + sanitizedDescription);
             String loginPage = request.getContextPath() + "/login.html?authError="
                     + URLEncoder.encode(message, "UTF-8");
             response.sendRedirect(loginPage);

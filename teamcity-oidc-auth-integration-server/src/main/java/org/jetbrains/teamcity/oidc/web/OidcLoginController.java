@@ -1,6 +1,7 @@
 package org.jetbrains.teamcity.oidc.web;
 
 import jetbrains.buildServer.RootUrlHolder;
+import jetbrains.buildServer.controllers.AuthorizationInterceptor;
 import jetbrains.buildServer.controllers.BaseController;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.SBuildServer;
@@ -8,6 +9,8 @@ import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.teamcity.oidc.OidcConstants;
+import org.jetbrains.teamcity.oidc.RedirectUtil;
+import org.jetbrains.teamcity.oidc.auth.OidcAuthenticationScheme;
 import org.jetbrains.teamcity.oidc.auth.OidcStateManager;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorage;
@@ -39,13 +42,15 @@ public class OidcLoginController extends BaseController {
             @NotNull OidcPluginSettingsStorage settingsStorage,
             @NotNull OidcClient oidcClient,
             @NotNull OidcStateManager stateManager,
-            @NotNull RootUrlHolder rootUrlHolder) {
+            @NotNull RootUrlHolder rootUrlHolder,
+            @NotNull AuthorizationInterceptor authInterceptor) {
         super(server);
         this.settingsStorage = settingsStorage;
         this.oidcClient = oidcClient;
         this.stateManager = stateManager;
         this.rootUrlHolder = rootUrlHolder;
 
+        authInterceptor.addPathNotRequiringAuth(OidcAuthenticationScheme.class, OidcConstants.LOGIN_PATH);
         webControllerManager.registerController(OidcConstants.LOGIN_PATH, this);
     }
 
@@ -70,10 +75,11 @@ public class OidcLoginController extends BaseController {
             authorizationEndpoint = discovery.getAuthorizationEndpoint();
         }
 
-        // Store any requested URL for post-login redirect
+        // Store any requested URL for post-login redirect.
+        // Only relative paths are accepted to prevent open redirect attacks.
         HttpSession session = request.getSession(true);
-        String redirectAfter = request.getParameter("redirectTo");
-        if (redirectAfter != null && !redirectAfter.isEmpty()) {
+        String redirectAfter = RedirectUtil.sanitizeRedirectPath(request.getParameter("redirectTo"));
+        if (redirectAfter != null) {
             session.setAttribute(OidcConstants.SESSION_REDIRECT_URL, redirectAfter);
         }
 
@@ -116,4 +122,5 @@ public class OidcLoginController extends BaseController {
     private static boolean isBlank(@Nullable String s) {
         return s == null || s.trim().isEmpty();
     }
+
 }

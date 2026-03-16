@@ -9,7 +9,6 @@ public final class OidcConstants {
 
     // Auth scheme identifiers
     public static final String AUTH_SCHEME_NAME = "OpenID Connect";
-    public static final String AUTH_SCHEME_TYPE = "oidc";
     public static final String AUTH_SCHEME_DESCRIPTION = "Authenticate using an external OpenID Connect identity provider";
 
     // URL paths registered by this plugin

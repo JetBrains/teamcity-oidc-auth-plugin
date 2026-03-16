@@ -11,6 +11,7 @@ import jetbrains.buildServer.users.UserModelEx;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.teamcity.oidc.OidcConstants;
+import org.jetbrains.teamcity.oidc.RedirectUtil;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorage;
 import org.jetbrains.teamcity.oidc.oidc.OidcClient;
@@ -113,10 +114,9 @@ public class OidcTokenIntrospectionInterceptor extends SkippableInterceptor {
         // If the user still has a live KC session the re-authentication is seamless:
         // KC issues a new token (with up-to-date group claims) and bounces them back
         // to TC without a password prompt, transparently applying any permission changes.
-        // Strip CRLF to prevent HTTP response splitting before embedding in the redirect URL.
-        String returnTo = request.getRequestURI().replaceAll("[\r\n]", "");
+        String returnTo = RedirectUtil.stripCrlf(request.getRequestURI());
         String qs = request.getQueryString();
-        if (qs != null && !qs.isEmpty()) returnTo += "?" + qs.replaceAll("[\r\n]", "");
+        if (qs != null && !qs.isEmpty()) returnTo += "?" + RedirectUtil.stripCrlf(qs);
         response.sendRedirect(request.getContextPath() + OidcConstants.LOGIN_PATH
                 + "?redirectTo=" + URLEncoder.encode(returnTo, "UTF-8"));
         return false;

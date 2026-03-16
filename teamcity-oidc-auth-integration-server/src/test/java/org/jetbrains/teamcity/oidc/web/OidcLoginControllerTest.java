@@ -1,6 +1,7 @@
 package org.jetbrains.teamcity.oidc.web;
 
 import jetbrains.buildServer.RootUrlHolder;
+import jetbrains.buildServer.controllers.AuthorizationInterceptor;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.teamcity.oidc.InMemoryOidcPluginSettingsStorage;
@@ -54,7 +55,8 @@ public class OidcLoginControllerTest {
 
         controller = new OidcLoginController(
                 mock(SBuildServer.class), mock(WebControllerManager.class),
-                storage, mockClient, stateManager, mockRootUrl);
+                storage, mockClient, stateManager, mockRootUrl,
+                mock(AuthorizationInterceptor.class));
     }
 
     private MockHttpServletResponse handle(MockHttpServletRequest req) throws Exception {

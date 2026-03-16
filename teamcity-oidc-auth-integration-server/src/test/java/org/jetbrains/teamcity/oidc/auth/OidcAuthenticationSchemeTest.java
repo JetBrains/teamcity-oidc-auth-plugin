@@ -6,11 +6,9 @@ import jetbrains.buildServer.controllers.interceptors.auth.HttpAuthenticationRes
 import jetbrains.buildServer.groups.SUserGroup;
 import jetbrains.buildServer.groups.UserGroupManager;
 import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
-import jetbrains.buildServer.users.UserModel;
 import jetbrains.buildServer.users.UserModelEx;
 import jetbrains.buildServer.users.impl.NewUserAccount;
 import jetbrains.buildServer.users.impl.UserEx;
-import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.teamcity.oidc.InMemoryOidcPluginSettingsStorage;
 import org.jetbrains.teamcity.oidc.config.OidcClaimMappingSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
@@ -100,9 +98,8 @@ public class OidcAuthenticationSchemeTest {
         when(mockStateManager.consumeNonce(any())).thenReturn(NONCE);
 
         scheme = new OidcAuthenticationScheme(
-                settingsStorage, mockClient, mockValidator,
-                mockStateManager, mockUserModel, mockGroupManager, mockRootUrl,
-                mock(AuthorizationInterceptor.class));
+                mock(LoginConfiguration.class), settingsStorage, mockClient, mockValidator,
+                mockStateManager, mockUserModel, mockGroupManager, mockRootUrl);
     }
 
     private MockHttpServletRequest callbackRequest() {
