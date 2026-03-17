@@ -15,6 +15,10 @@ public final class OidcConstants {
     public static final String LOGIN_PATH             = "/app/oidc/login";
     public static final String CALLBACK_PATH          = "/app/oidc/callback";
     public static final String BACKCHANNEL_LOGOUT_PATH = "/app/oidc/backchannel-logout";
+    public static final String ADMIN_SETTINGS_PATH    = "/admin/editOidcAuthScheme.html";
+
+    // Admin tab identifier (used in /admin/admin.html?item=<ADMIN_TAB_ID>)
+    public static final String ADMIN_TAB_ID = "oidcSettings";
 
     // OIDC Back-Channel Logout event identifier (RFC 8935)
     public static final String BACKCHANNEL_LOGOUT_EVENT = "http://schemas.openid.net/event/backchannel-logout";

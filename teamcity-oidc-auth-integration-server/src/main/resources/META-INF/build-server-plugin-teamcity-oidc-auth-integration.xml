@@ -16,6 +16,8 @@
   <bean class="org.jetbrains.teamcity.oidc.web.OidcLoginController"/>
   <bean class="org.jetbrains.teamcity.oidc.web.OidcCallbackController"/>
   <bean class="org.jetbrains.teamcity.oidc.web.OidcBackChannelLogoutController"/>
+  <bean class="org.jetbrains.teamcity.oidc.web.OidcAdminSettingsController"/>
+  <bean class="org.jetbrains.teamcity.oidc.web.OidcSettingsAdminPage"/>
   <bean class="org.jetbrains.teamcity.oidc.web.OidcLoginPageExtension"/>
 
 </beans>

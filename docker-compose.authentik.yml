@@ -1,0 +1,41 @@
+  services:
+    postgresql:
+      image: postgres:16-alpine
+      environment:
+        POSTGRES_USER: authentik
+        POSTGRES_PASSWORD: authentik
+        POSTGRES_DB: authentik
+      volumes:
+        - pg_data:/var/lib/postgresql/data
+
+    redis:
+      image: redis:alpine
+
+    authentik-server:
+      image: ghcr.io/goauthentik/server:2024.12.3
+      command: server
+      environment:
+        AUTHENTIK_REDIS__HOST: redis
+        AUTHENTIK_POSTGRESQL__HOST: postgresql
+        AUTHENTIK_POSTGRESQL__USER: authentik
+        AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+        AUTHENTIK_POSTGRESQL__NAME: authentik
+        AUTHENTIK_SECRET_KEY: "change-me-for-local-dev-only"
+      ports:
+        - "9000:9000"
+      depends_on: [postgresql, redis]
+
+    authentik-worker:
+      image: ghcr.io/goauthentik/server:2024.12.3
+      command: worker
+      environment:
+        AUTHENTIK_REDIS__HOST: redis
+        AUTHENTIK_POSTGRESQL__HOST: postgresql
+        AUTHENTIK_POSTGRESQL__USER: authentik
+        AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+        AUTHENTIK_POSTGRESQL__NAME: authentik
+        AUTHENTIK_SECRET_KEY: "change-me-for-local-dev-only"
+      depends_on: [postgresql, redis]
+
+  volumes:
+    pg_data:

@@ -10,7 +10,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.teamcity.oidc.OidcConstants;
 import org.jetbrains.teamcity.oidc.RedirectUtil;
-import org.jetbrains.teamcity.oidc.auth.OidcAuthenticationScheme;
 import org.jetbrains.teamcity.oidc.auth.OidcStateManager;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorage;
@@ -27,7 +26,7 @@ import java.util.List;
 /**
  * Handles {@code GET /app/oidc/login}.
  * Builds the IdP authorization URL and redirects the browser.
- * The path is exempted from authentication by {@link org.jetbrains.teamcity.oidc.auth.OidcAuthenticationScheme}.
+ * The path is unconditionally exempted from authentication via {@link AuthorizationInterceptor}.
  */
 public class OidcLoginController extends BaseController {
 
@@ -50,7 +49,7 @@ public class OidcLoginController extends BaseController {
         this.stateManager = stateManager;
         this.rootUrlHolder = rootUrlHolder;
 
-        authInterceptor.addPathNotRequiringAuth(OidcAuthenticationScheme.class, OidcConstants.LOGIN_PATH);
+        authInterceptor.addPathNotRequiringAuth(OidcConstants.LOGIN_PATH);
         webControllerManager.registerController(OidcConstants.LOGIN_PATH, this);
     }
 

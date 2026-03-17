@@ -104,6 +104,18 @@ public class OidcPluginSettings {
         return s;
     }
 
+    // ---- view helpers (for JSP) --------------------------------------------
+
+    /** Returns {@link #allowedEmailDomains} as a comma-separated string for form rendering. */
+    public String getAllowedEmailDomainsJoined() {
+        return allowedEmailDomains == null ? "" : String.join(", ", allowedEmailDomains);
+    }
+
+    /** Returns {@link #scopes} as a space-separated string for form rendering. */
+    public String getScopesJoined() {
+        return scopes == null ? "" : String.join(" ", scopes);
+    }
+
     // ---- getters / setters -------------------------------------------------
 
     public String getIssuerUrl() { return issuerUrl; }

@@ -131,9 +131,16 @@ public class OidcIdTokenValidator {
 
     private void checkIssuer(JWTClaimsSet claims, String expected) throws OidcAuthException {
         String iss = claims.getIssuer();
-        if (!expected.equals(iss)) {
+        // Normalize trailing slashes before comparing: some IdPs (e.g. Authentik) always
+        // append a trailing slash to the issuer in tokens regardless of how it is configured.
+        if (!stripTrailingSlash(expected).equals(stripTrailingSlash(iss))) {
             throw new OidcAuthException("ID token issuer mismatch: expected '" + expected + "', got '" + iss + "'");
         }
+    }
+
+    private static String stripTrailingSlash(@Nullable String s) {
+        if (s == null) return "";
+        return s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
     }
 
     private void checkAudience(JWTClaimsSet claims, String clientId) throws OidcAuthException {

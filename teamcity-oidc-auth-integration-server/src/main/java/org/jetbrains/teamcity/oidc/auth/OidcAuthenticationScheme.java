@@ -1,7 +1,6 @@
 package org.jetbrains.teamcity.oidc.auth;
 
 import jetbrains.buildServer.RootUrlHolder;
-import jetbrains.buildServer.controllers.AuthorizationInterceptor;
 import jetbrains.buildServer.controllers.interceptors.auth.HttpAuthenticationResult;
 import jetbrains.buildServer.controllers.interceptors.auth.HttpAuthenticationSchemeAdapter;
 import jetbrains.buildServer.controllers.interceptors.auth.util.HttpAuthUtil;
@@ -75,6 +74,11 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
     @Override
     public boolean isMultipleInstancesAllowed() {
         return false;
+    }
+
+    @Override
+    public String getEditPropertiesJspFilePath() {
+        return OidcConstants.ADMIN_SETTINGS_PATH;
     }
 
     public boolean isConfigured() {

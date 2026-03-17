@@ -63,7 +63,7 @@ public class OidcBackChannelLogoutController extends BaseController {
         this.sessionModel = sessionModel;
         webControllerManager.registerController(OidcConstants.BACKCHANNEL_LOGOUT_PATH, this);
 
-        authInterceptor.addPathNotRequiringAuth(OidcAuthenticationScheme.class, OidcConstants.BACKCHANNEL_LOGOUT_PATH);
+        authInterceptor.addPathNotRequiringAuth(OidcConstants.BACKCHANNEL_LOGOUT_PATH);
     }
 
     @Nullable
