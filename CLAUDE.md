@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build Commands
 
 ```bash
-# Build the plugin ZIP (output: target/teamcity-oidc-auth-integration.zip)
+# Build the plugin ZIP (output: target/teamcity-oidc-auth.zip)
 mvn package
 
 # Compile only, skip tests
@@ -35,7 +35,7 @@ This is a **TeamCity server-side plugin** that adds OIDC authentication. It is n
 | `build/` | Assembly only — packages the JAR + `teamcity-plugin.xml` into a deployable ZIP |
 | `examples/` | Reference implementations (SAML plugin, Keycloak plugin) — not part of the build |
 
-The final artifact is `target/teamcity-oidc-auth-integration.zip` (written to the **root** `target/`, not the module's).
+The final artifact is `target/teamcity-oidc-auth.zip` (written to the **root** `target/`, not the module's).
 
 ### How TeamCity loads the plugin
 

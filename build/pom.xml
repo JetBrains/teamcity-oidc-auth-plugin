@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>teamcity-oidc-auth-integration</artifactId>
+    <artifactId>teamcity-oidc-auth</artifactId>
     <groupId>org.jetbrains.teamcity</groupId>
     <version>1.0-SNAPSHOT</version>
   </parent>
@@ -10,14 +10,14 @@
   <packaging>pom</packaging>
   <properties>
       <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
-      <teamcity.teamcity-oidc-auth-integration.plugin.version>snapshot-${maven.build.timestamp}</teamcity.teamcity-oidc-auth-integration.plugin.version>
-      <teamcity.teamcity-oidc-auth-integration.plugin.vendorName>Plugin vendor name</teamcity.teamcity-oidc-auth-integration.plugin.vendorName>
-      <teamcity.teamcity-oidc-auth-integration.plugin.vendorUrl>Plugin vendor URL</teamcity.teamcity-oidc-auth-integration.plugin.vendorUrl>
+      <teamcity.teamcity-oidc-auth.plugin.version>snapshot-${maven.build.timestamp}</teamcity.teamcity-oidc-auth.plugin.version>
+      <teamcity.teamcity-oidc-auth.plugin.vendorName>JetBrains</teamcity.teamcity-oidc-auth.plugin.vendorName>
+      <teamcity.teamcity-oidc-auth.plugin.vendorUrl>https://www.jetbrains.com/</teamcity.teamcity-oidc-auth.plugin.vendorUrl>
   </properties>
   <dependencies>
       <dependency>
            <groupId>org.jetbrains.teamcity</groupId>
-           <artifactId>teamcity-oidc-auth-integration-server</artifactId>
+           <artifactId>teamcity-oidc-auth-server</artifactId>
            <version>1.0-SNAPSHOT</version>
       </dependency>
   </dependencies>
@@ -41,15 +41,15 @@
                 <replacements>
                     <replacement>
                         <token>@Version@</token>
-                        <value>${teamcity.teamcity-oidc-auth-integration.plugin.version}</value>
+                        <value>${teamcity.teamcity-oidc-auth.plugin.version}</value>
                     </replacement>
                     <replacement>
                         <token>@VendorName@</token>
-                        <value>${teamcity.teamcity-oidc-auth-integration.plugin.vendorName}</value>
+                        <value>${teamcity.teamcity-oidc-auth.plugin.vendorName}</value>
                     </replacement>
                     <replacement>
                         <token>@VendorURL@</token>
-                        <value>${teamcity.teamcity-oidc-auth-integration.plugin.vendorUrl}</value>
+                        <value>${teamcity.teamcity-oidc-auth.plugin.vendorUrl}</value>
                     </replacement>
                 </replacements>                        
             </configuration>
@@ -65,7 +65,7 @@
                   <goal>single</goal>
                 </goals>
                 <configuration>
-                  <finalName>teamcity-oidc-auth-integration</finalName>
+                  <finalName>teamcity-oidc-auth</finalName>
                   <outputDirectory>${project.parent.build.directory}</outputDirectory>
                   <appendAssemblyId>false</appendAssemblyId>
                   <descriptors>
