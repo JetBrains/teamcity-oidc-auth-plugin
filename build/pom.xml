@@ -11,8 +11,8 @@
   <properties>
       <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
       <teamcity.teamcity-oidc-auth-integration.plugin.version>snapshot-${maven.build.timestamp}</teamcity.teamcity-oidc-auth-integration.plugin.version>
-      <teamcity.teamcity-oidc-auth-integration.plugin.vendorName>Plugin vendor name</teamcity.teamcity-oidc-auth-integration.plugin.vendorName>
-      <teamcity.teamcity-oidc-auth-integration.plugin.vendorUrl>Plugin vendor URL</teamcity.teamcity-oidc-auth-integration.plugin.vendorUrl>
+      <teamcity.teamcity-oidc-auth-integration.plugin.vendorName>JetBrains</teamcity.teamcity-oidc-auth-integration.plugin.vendorName>
+      <teamcity.teamcity-oidc-auth-integration.plugin.vendorUrl>https://www.jetbrains.com/</teamcity.teamcity-oidc-auth-integration.plugin.vendorUrl>
   </properties>
   <dependencies>
       <dependency>
