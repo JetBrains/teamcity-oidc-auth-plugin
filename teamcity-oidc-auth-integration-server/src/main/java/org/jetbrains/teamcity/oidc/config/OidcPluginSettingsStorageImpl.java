@@ -3,28 +3,35 @@ package org.jetbrains.teamcity.oidc.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jetbrains.buildServer.configuration.FileWatcher;
 import jetbrains.buildServer.log.Loggers;
-import jetbrains.buildServer.serverSide.IOGuard;
 import jetbrains.buildServer.serverSide.ServerPaths;
+import jetbrains.buildServer.serverSide.SettingsPersister;
+import jetbrains.buildServer.serverSide.impl.FileWatcherFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.teamcity.oidc.OidcConstants;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 
 public class OidcPluginSettingsStorageImpl implements OidcPluginSettingsStorage {
 
+    public static final String SAVE_CONFIG_DESCRIPTION = "Saving OIDC Auth plugin configuration";
     private final File configFile;
     private final ObjectMapper objectMapper;
     private final FileWatcher fileWatcher;
+    private final SettingsPersister settingsPersister;
 
     private volatile OidcPluginSettings cachedSettings;
     private final Object lock = new Object();
 
-    public OidcPluginSettingsStorageImpl(@NotNull ServerPaths serverPaths) {
+    public OidcPluginSettingsStorageImpl(@NotNull ServerPaths serverPaths,
+                                         @NotNull SettingsPersister settingsPersister,
+                                         @NotNull FileWatcherFactory fileWatcherFactory) {
         this.configFile = Paths.get(serverPaths.getConfigDir(), OidcConstants.CONFIG_FILE_NAME).toFile();
         this.objectMapper = new ObjectMapper();
-        this.fileWatcher = new FileWatcher(configFile);
+        this.fileWatcher = fileWatcherFactory.createFileWatcher(configFile);
+        this.settingsPersister = settingsPersister;
     }
 
     /** Called once by {@link org.jetbrains.teamcity.oidc.OidcPluginConfiguration} after construction. */
@@ -59,14 +66,10 @@ public class OidcPluginSettingsStorageImpl implements OidcPluginSettingsStorage 
     @Override
     public void saveSettings(@NotNull OidcPluginSettings settings) throws IOException {
         synchronized (lock) {
-            fileWatcher.runActionWithDisabledObserver(() -> {
-                try {
-                    IOGuard.allowDiskWrite(() -> objectMapper.writerWithDefaultPrettyPrinter()
-                            .writeValue(configFile, settings));
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
+            try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+                objectMapper.writerWithDefaultPrettyPrinter().writeValue(os, settings);
+                settingsPersister.scheduleSaveFile(SAVE_CONFIG_DESCRIPTION, fileWatcher, os.toByteArray());
+            }
             cachedSettings = settings;
         }
     }
