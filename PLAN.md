@@ -1041,7 +1041,7 @@ mvn package
 Copy the ZIP into the TeamCity data directory (which is persisted in the Docker volume):
 
 ```bash
-docker cp build/target/teamcity-oidc-auth-integration.zip \
+docker cp build/target/teamcity-oidc-auth.zip \
     $(docker compose ps -q teamcity):/data/teamcity_server/datadir/plugins/
 ```
 

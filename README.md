@@ -131,7 +131,7 @@ Register a confidential OAuth 2.0 / OIDC client in your IdP with:
 mvn package
 ```
 
-The plugin ZIP is produced at `build/target/teamcity-oidc-auth-integration.zip`.
+The plugin ZIP is produced at `build/target/teamcity-oidc-auth.zip`.
 
 ## Architecture
 
