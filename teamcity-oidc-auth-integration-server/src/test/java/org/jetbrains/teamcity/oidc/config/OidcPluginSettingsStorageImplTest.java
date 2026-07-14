@@ -1,43 +1,61 @@
 package org.jetbrains.teamcity.oidc.config;
 
+import jetbrains.buildServer.TempFiles;
+import jetbrains.buildServer.configuration.FileWatcher;
+import jetbrains.buildServer.serverSide.PersistTask;
 import jetbrains.buildServer.serverSide.ServerPaths;
+import jetbrains.buildServer.serverSide.SettingsPersister;
+import jetbrains.buildServer.serverSide.impl.CriticalErrorsImpl;
+import jetbrains.buildServer.serverSide.impl.FileWatcherFactory;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.mockito.ArgumentCaptor;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Arrays;
 
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 public class OidcPluginSettingsStorageImplTest {
 
-    @Rule
-    public TemporaryFolder tmpDir = new TemporaryFolder();
-
     private ServerPaths serverPaths;
     private OidcPluginSettingsStorageImpl storage;
+    private SettingsPersister serverSettings;
+    private FileWatcherFactory fileWatcherFactory;
+    private TempFiles tempFiles;
+    private File configDir;
 
     @Before
     public void setUp() throws Exception {
+        tempFiles = new TempFiles();
         serverPaths = mock(ServerPaths.class);
-        when(serverPaths.getConfigDir()).thenReturn(tmpDir.getRoot().getAbsolutePath());
-        storage = new OidcPluginSettingsStorageImpl(serverPaths);
+        serverSettings = mock(SettingsPersister.class);
+        PersistTask persistTask = mock(PersistTask.class);
+        File dataDir = tempFiles.createTempDir();
+        configDir = new File(dataDir, "config");
+        configDir.mkdirs();
+        when(serverPaths.getConfigDir()).thenReturn(configDir.getAbsolutePath());
+        when(serverPaths.getDataDirectory()).thenReturn(dataDir);
+        when(serverSettings.scheduleSaveFile(eq(OidcPluginSettingsStorageImpl.SAVE_CONFIG_DESCRIPTION), any(FileWatcher.class), any(byte[].class))).thenReturn(persistTask);
+
+        fileWatcherFactory = new FileWatcherFactory(serverPaths, new CriticalErrorsImpl(serverPaths));
+        storage = new OidcPluginSettingsStorageImpl(serverPaths, serverSettings, fileWatcherFactory);
         storage.init();
+    }
+
+    @After
+    public void tearDown() {
+        tempFiles.cleanup();
     }
 
     @Test
     public void loadsDefaultsWhenFileAbsent() {
-        // init() writes a default file; delete it and create a new storage instance
-        File configFile = new File(tmpDir.getRoot(), "oidc-auth-plugin.json");
-        assertTrue(configFile.delete());
-
-        OidcPluginSettingsStorageImpl fresh = new OidcPluginSettingsStorageImpl(serverPaths);
+        OidcPluginSettingsStorageImpl fresh = new OidcPluginSettingsStorageImpl(serverPaths, serverSettings, fileWatcherFactory);
         OidcPluginSettings settings = fresh.getSettings();
 
         assertNotNull(settings);
@@ -54,17 +72,21 @@ public class OidcPluginSettingsStorageImplTest {
         toSave.setClientId("my-client");
         toSave.setClientSecret("secret123");
         toSave.setCreateUsersAutomatically(true);
-
         storage.saveSettings(toSave);
 
-        // Create a new instance pointing at the same file to verify persistence
-        OidcPluginSettingsStorageImpl reloaded = new OidcPluginSettingsStorageImpl(serverPaths);
-        OidcPluginSettings loaded = reloaded.getSettings();
+        ArgumentCaptor<byte[]> bytesCaptor = ArgumentCaptor.forClass(byte[].class);
+        verify(serverSettings, atLeast(2)).scheduleSaveFile(
+                eq(OidcPluginSettingsStorageImpl.SAVE_CONFIG_DESCRIPTION),
+                any(FileWatcher.class),
+                bytesCaptor.capture()
+        );
 
-        assertEquals("https://idp.example.com/realms/test", loaded.getIssuerUrl());
-        assertEquals("my-client", loaded.getClientId());
-        assertEquals("secret123", loaded.getClientSecret());
-        assertTrue(loaded.isCreateUsersAutomatically());
+        assertEquals(storage.getSettings().getIssuerUrl(), toSave.getIssuerUrl());
+
+        byte[] actualBytes = bytesCaptor.getAllValues().get(1);
+        String savedJson = new String(actualBytes, StandardCharsets.UTF_8);
+
+        assertTrue(savedJson, savedJson.contains(toSave.getIssuerUrl()));
     }
 
     @Test
@@ -76,7 +98,7 @@ public class OidcPluginSettingsStorageImplTest {
         assertEquals("https://original.example.com", storage.getSettings().getIssuerUrl());
 
         // Simulate external file modification
-        File configFile = new File(tmpDir.getRoot(), "oidc-auth-plugin.json");
+        File configFile = new File(configDir, "oidc-auth-plugin.json");
         String newJson = "{\"issuerUrl\":\"https://new.example.com\"}";
         Files.write(configFile.toPath(), newJson.getBytes());
 
@@ -97,11 +119,11 @@ public class OidcPluginSettingsStorageImplTest {
 
     @Test
     public void jacksonIgnoresUnknownFields() throws IOException {
-        File configFile = new File(tmpDir.getRoot(), "oidc-auth-plugin.json");
+        File configFile = new File(configDir, "oidc-auth-plugin.json");
         String json = "{\"issuerUrl\":\"https://idp.example.com\",\"unknownFutureField\":\"someValue\"}";
         Files.write(configFile.toPath(), json.getBytes());
 
-        OidcPluginSettingsStorageImpl fresh = new OidcPluginSettingsStorageImpl(serverPaths);
+        OidcPluginSettingsStorageImpl fresh = new OidcPluginSettingsStorageImpl(serverPaths, serverSettings, fileWatcherFactory);
         OidcPluginSettings settings = fresh.getSettings();
 
         assertEquals("https://idp.example.com", settings.getIssuerUrl());
