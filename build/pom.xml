@@ -10,9 +10,9 @@
   <packaging>pom</packaging>
   <properties>
       <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
-      <teamcity.teamcity-oidc-auth.plugin.version>snapshot-${maven.build.timestamp}</teamcity.teamcity-oidc-auth.plugin.version>
-      <teamcity.teamcity-oidc-auth.plugin.vendorName>JetBrains</teamcity.teamcity-oidc-auth.plugin.vendorName>
-      <teamcity.teamcity-oidc-auth.plugin.vendorUrl>https://www.jetbrains.com/</teamcity.teamcity-oidc-auth.plugin.vendorUrl>
+      <teamcity.oidc.auth.plugin.version>snapshot-${maven.build.timestamp}</teamcity.oidc.auth.plugin.version>
+      <teamcity.oidc.auth.plugin.vendorName>JetBrains</teamcity.oidc.auth.plugin.vendorName>
+      <teamcity.oidc.auth.plugin.vendorUrl>https://www.jetbrains.com/</teamcity.oidc.auth.plugin.vendorUrl>
   </properties>
   <dependencies>
       <dependency>
@@ -41,15 +41,15 @@
                 <replacements>
                     <replacement>
                         <token>@Version@</token>
-                        <value>${teamcity.teamcity-oidc-auth.plugin.version}</value>
+                        <value>${teamcity.oidc.auth.plugin.version}</value>
                     </replacement>
                     <replacement>
                         <token>@VendorName@</token>
-                        <value>${teamcity.teamcity-oidc-auth.plugin.vendorName}</value>
+                        <value>${teamcity.oidc.auth.plugin.vendorName}</value>
                     </replacement>
                     <replacement>
                         <token>@VendorURL@</token>
-                        <value>${teamcity.teamcity-oidc-auth.plugin.vendorUrl}</value>
+                        <value>${teamcity.oidc.auth.plugin.vendorUrl}</value>
                     </replacement>
                 </replacements>                        
             </configuration>
