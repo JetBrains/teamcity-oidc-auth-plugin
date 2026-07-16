@@ -121,37 +121,6 @@ public class OidcPluginSettingsStorageImplTest {
         assertTrue(savedJson, savedJson.contains("encrypted:secret123"));
 
         // Simulate persisted file content and verify decrypt-on-read path.
-        File configFile = new File(configDir, "oidc-auth-plugin.json");
-        Files.write(configFile.toPath(), actualBytes);
-        storage.reload();
-
-        OidcPluginSettings reloaded = storage.getSettings();
-        assertEquals("secret123", reloaded.getClientSecret());
-        assertEquals("https://idp.example.com", reloaded.getIssuerUrl());
-    }
-
-    @Test
-    public void clientSecretMustBeEncrypted() throws IOException {
-        OidcPluginSettings toSave = new OidcPluginSettings();
-        toSave.setIssuerUrl("https://idp.example.com");
-        toSave.setClientSecret("secret123");
-        storage.saveSettings(toSave);
-
-        ArgumentCaptor<byte[]> bytesCaptor = ArgumentCaptor.forClass(byte[].class);
-        verify(serverSettings, atLeast(2)).scheduleSaveFile(
-                eq(OidcPluginSettingsStorageImpl.SAVE_CONFIG_DESCRIPTION),
-                any(FileWatcher.class),
-                bytesCaptor.capture()
-        );
-
-        assertEquals(storage.getSettings().getIssuerUrl(), toSave.getIssuerUrl());
-
-        byte[] actualBytes = bytesCaptor.getAllValues().get(1);
-        String savedJson = new String(actualBytes, StandardCharsets.UTF_8);
-        assertFalse(savedJson, savedJson.contains("\"secret123\""));
-        assertTrue(savedJson, savedJson.contains("encrypted:secret123"));
-
-        // Simulate persisted file content and verify decrypt-on-read path.
         File configFile = new File(configDir, "oidc-auth.json");
         Files.write(configFile.toPath(), actualBytes);
         storage.reload();
