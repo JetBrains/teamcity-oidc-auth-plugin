@@ -5,6 +5,7 @@ import jetbrains.buildServer.configuration.FileWatcher;
 import jetbrains.buildServer.serverSide.PersistTask;
 import jetbrains.buildServer.serverSide.ServerPaths;
 import jetbrains.buildServer.serverSide.SettingsPersister;
+import jetbrains.buildServer.serverSide.crypt.Encryption;
 import jetbrains.buildServer.serverSide.impl.CriticalErrorsImpl;
 import jetbrains.buildServer.serverSide.impl.FileWatcherFactory;
 import org.junit.After;
@@ -27,6 +28,7 @@ public class OidcPluginSettingsStorageImplTest {
     private OidcPluginSettingsStorageImpl storage;
     private SettingsPersister serverSettings;
     private FileWatcherFactory fileWatcherFactory;
+    private Encryption encryption;
     private TempFiles tempFiles;
     private File configDir;
 
@@ -42,9 +44,17 @@ public class OidcPluginSettingsStorageImplTest {
         when(serverPaths.getConfigDir()).thenReturn(configDir.getAbsolutePath());
         when(serverPaths.getDataDirectory()).thenReturn(dataDir);
         when(serverSettings.scheduleSaveFile(eq(OidcPluginSettingsStorageImpl.SAVE_CONFIG_DESCRIPTION), any(FileWatcher.class), any(byte[].class))).thenReturn(persistTask);
+        encryption = mock(Encryption.class);
+        when(encryption.encrypt(anyString())).thenAnswer(invocation -> "encrypted:" + invocation.getArgument(0));
+        when(encryption.decrypt(anyString())).thenAnswer(invocation -> {
+            String value = invocation.getArgument(0);
+            return value != null && value.startsWith("encrypted:")
+                    ? value.substring("encrypted:".length())
+                    : value;
+        });
 
         fileWatcherFactory = new FileWatcherFactory(serverPaths, new CriticalErrorsImpl(serverPaths));
-        storage = new OidcPluginSettingsStorageImpl(serverPaths, serverSettings, fileWatcherFactory);
+        storage = new OidcPluginSettingsStorageImpl(serverPaths, serverSettings, fileWatcherFactory, encryption);
         storage.init();
     }
 
@@ -55,7 +65,7 @@ public class OidcPluginSettingsStorageImplTest {
 
     @Test
     public void loadsDefaultsWhenFileAbsent() {
-        OidcPluginSettingsStorageImpl fresh = new OidcPluginSettingsStorageImpl(serverPaths, serverSettings, fileWatcherFactory);
+        OidcPluginSettingsStorageImpl fresh = new OidcPluginSettingsStorageImpl(serverPaths, serverSettings, fileWatcherFactory, encryption);
         OidcPluginSettings settings = fresh.getSettings();
 
         assertNotNull(settings);
@@ -87,6 +97,37 @@ public class OidcPluginSettingsStorageImplTest {
         String savedJson = new String(actualBytes, StandardCharsets.UTF_8);
 
         assertTrue(savedJson, savedJson.contains(toSave.getIssuerUrl()));
+    }
+
+    @Test
+    public void clientSecretMustBeEncrypted() throws IOException {
+        OidcPluginSettings toSave = new OidcPluginSettings();
+        toSave.setIssuerUrl("https://idp.example.com");
+        toSave.setClientSecret("secret123");
+        storage.saveSettings(toSave);
+
+        ArgumentCaptor<byte[]> bytesCaptor = ArgumentCaptor.forClass(byte[].class);
+        verify(serverSettings, atLeast(2)).scheduleSaveFile(
+                eq(OidcPluginSettingsStorageImpl.SAVE_CONFIG_DESCRIPTION),
+                any(FileWatcher.class),
+                bytesCaptor.capture()
+        );
+
+        assertEquals(storage.getSettings().getIssuerUrl(), toSave.getIssuerUrl());
+
+        byte[] actualBytes = bytesCaptor.getAllValues().get(1);
+        String savedJson = new String(actualBytes, StandardCharsets.UTF_8);
+        assertFalse(savedJson, savedJson.contains("\"secret123\""));
+        assertTrue(savedJson, savedJson.contains("encrypted:secret123"));
+
+        // Simulate persisted file content and verify decrypt-on-read path.
+        File configFile = new File(configDir, "oidc-auth-plugin.json");
+        Files.write(configFile.toPath(), actualBytes);
+        storage.reload();
+
+        OidcPluginSettings reloaded = storage.getSettings();
+        assertEquals("secret123", reloaded.getClientSecret());
+        assertEquals("https://idp.example.com", reloaded.getIssuerUrl());
     }
 
     @Test
@@ -123,7 +164,7 @@ public class OidcPluginSettingsStorageImplTest {
         String json = "{\"issuerUrl\":\"https://idp.example.com\",\"unknownFutureField\":\"someValue\"}";
         Files.write(configFile.toPath(), json.getBytes());
 
-        OidcPluginSettingsStorageImpl fresh = new OidcPluginSettingsStorageImpl(serverPaths, serverSettings, fileWatcherFactory);
+        OidcPluginSettingsStorageImpl fresh = new OidcPluginSettingsStorageImpl(serverPaths, serverSettings, fileWatcherFactory, encryption);
         OidcPluginSettings settings = fresh.getSettings();
 
         assertEquals("https://idp.example.com", settings.getIssuerUrl());
