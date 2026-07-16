@@ -15,7 +15,7 @@
     <moduleSet>
        <useAllReactorProjects>true</useAllReactorProjects>
        <includes>
-           <include>org.jetbrains.teamcity:teamcity-oidc-auth-integration-server</include>
+           <include>org.jetbrains.teamcity:teamcity-oidc-auth-server</include>
        </includes> 
        <binaries>
            <outputDirectory>server</outputDirectory>
