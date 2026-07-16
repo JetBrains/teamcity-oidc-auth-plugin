@@ -34,7 +34,7 @@ TC_URL_FROM_KC="${TC_URL_FROM_KC:-$TC_URL}"
 KC_REALM="${KC_REALM:-master}"
 TC_DATADIR="${TC_DATADIR:-$SCRIPT_DIR/servers/2025.11/.datadir}"
 TC_CLIENT_ID="teamcity"
-TC_CONFIG_FILE="$TC_DATADIR/config/oidc-auth-plugin.json"
+TC_CONFIG_FILE="$TC_DATADIR/config/oidc-auth.json"
 # 30 days — matches TeamCity's default remember-me token lifetime
 KC_SESSION_MAX_SECONDS="${KC_SESSION_MAX_SECONDS:-2592000}"
 

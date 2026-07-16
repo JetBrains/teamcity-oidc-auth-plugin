@@ -32,7 +32,7 @@ Browser → TeamCity Login Page
 
 ## Configuration (file-based)
 
-Config file location: `{teamcityDataDirectory}/config/oidc-auth-plugin.json`
+Config file location: `{teamcityDataDirectory}/config/oidc-auth.json`
 
 The file is watched for changes at runtime (no restart required). All configuration is read from
 this file; there is no database or TeamCity connection settings involved.
@@ -175,7 +175,7 @@ Implements `OidcPluginSettingsStorage`. Injected with `ServerPaths` to resolve t
 directory and `ExecutorServices` to obtain the executor required by `FileWatcher`.
 
 **Behavior:**
-- Config file: `{ServerPaths.getConfigDir()}/oidc-auth-plugin.json`
+- Config file: `{ServerPaths.getConfigDir()}/oidc-auth.json`
 - Uses Jackson `ObjectMapper` for JSON serialization.
 - Creates a `FileWatcher` via `FileWatcher(file, executor, callback)` on startup; `callback`
   calls `reload()` which re-parses the file and updates the in-memory cache.
@@ -585,7 +585,7 @@ public final class OidcConstants {
     static final String CALLBACK_PATH = "/app/oidc/callback";
 
     // Config file name
-    static final String CONFIG_FILE_NAME = "oidc-auth-plugin.json";
+    static final String CONFIG_FILE_NAME = "oidc-auth.json";
 
     // Session attribute keys
     static final String SESSION_STATE = "oidc.state";
@@ -675,7 +675,7 @@ public class OidcPluginConfiguration {
 
 ## Configuration File Example
 
-File: `{teamcityDataDirectory}/config/oidc-auth-plugin.json`
+File: `{teamcityDataDirectory}/config/oidc-auth.json`
 
 ```json
 {
@@ -1041,7 +1041,7 @@ mvn package
 Copy the ZIP into the TeamCity data directory (which is persisted in the Docker volume):
 
 ```bash
-docker cp build/target/teamcity-oidc-auth.zip \
+docker cp build/target/oidc-auth.zip \
     $(docker compose ps -q teamcity):/data/teamcity_server/datadir/plugins/
 ```
 
@@ -1055,7 +1055,7 @@ docker compose restart teamcity
 
 ```bash
 docker exec -it $(docker compose ps -q teamcity) bash -c 'cat > \
-  /data/teamcity_server/datadir/config/oidc-auth-plugin.json << EOF
+  /data/teamcity_server/datadir/config/oidc-auth.json << EOF
 {
   "issuerUrl": "http://keycloak:8080/realms/dev",
   "clientId": "teamcity",
@@ -1099,7 +1099,7 @@ Edit the config file while both containers are running:
 ```bash
 docker exec -it $(docker compose ps -q teamcity) \
     sed -i 's/"createUsersAutomatically": true/"createUsersAutomatically": false/' \
-    /data/teamcity_server/datadir/config/oidc-auth-plugin.json
+    /data/teamcity_server/datadir/config/oidc-auth.json
 ```
 
 Attempt to log in with a new (non-existent) user — it should be rejected without restarting

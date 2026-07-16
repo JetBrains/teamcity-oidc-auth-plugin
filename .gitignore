@@ -19,7 +19,7 @@ repository/lib
 .flattened-pom.xml
 
 # Sensitive config (never commit real credentials)
-oidc-auth-plugin.json
+oidc-auth.json
 
 # Node / frontend (if added later)
 node_modules/

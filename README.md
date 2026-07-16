@@ -34,7 +34,7 @@ A TeamCity server plugin that enables user authentication via **OpenID Connect (
 Create or edit the file:
 
 ```
-{teamcityDataDirectory}/config/oidc-auth-plugin.json
+{teamcityDataDirectory}/config/oidc-auth.json
 ```
 
 The file is watched for changes; TeamCity does not need to be restarted after editing it.
@@ -45,7 +45,7 @@ The file is watched for changes; TeamCity does not need to be restarted after ed
 {
   "issuerUrl": "https://idp.example.com/realms/my-realm",
   "clientId": "teamcity",
-  "clientSecret": "s3cr3t"
+  "clientSecret": "******"
 }
 ```
 
@@ -61,7 +61,7 @@ With only these three fields, the plugin will:
 {
   "issuerUrl": "https://idp.example.com/realms/my-realm",
   "clientId": "teamcity",
-  "clientSecret": "s3cr3t",
+  "clientSecret": "*****",
   "scopes": ["openid", "email", "profile"],
   "createUsersAutomatically": true,
   "allowedEmailDomains": ["example.com"],
@@ -121,7 +121,6 @@ Register a confidential OAuth 2.0 / OIDC client in your IdP with:
 
 ## Security Notes
 
-- The client secret is stored in plaintext. Restrict file permissions: `chmod 600 oidc-auth-plugin.json`.
 - ID tokens are validated against the IdP's JWKS on every login.
 - State and nonce parameters are generated per-request to prevent CSRF and replay attacks.
 
@@ -131,7 +130,7 @@ Register a confidential OAuth 2.0 / OIDC client in your IdP with:
 mvn package
 ```
 
-The plugin ZIP is produced at `build/target/teamcity-oidc-auth.zip`.
+The plugin ZIP is produced at `build/target/oidc-auth.zip`.
 
 ## Architecture
 
