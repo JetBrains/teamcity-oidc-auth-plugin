@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build Commands
 
 ```bash
-# Build the plugin ZIP (output: target/teamcity-oidc-auth.zip)
+# Build the plugin ZIP (output: target/oidc-auth.zip)
 mvn package
 
 # Compile only, skip tests
@@ -35,7 +35,7 @@ This is a **TeamCity server-side plugin** that adds OIDC authentication. It is n
 | `build/` | Assembly only — packages the JAR + `teamcity-plugin.xml` into a deployable ZIP |
 | `examples/` | Reference implementations (SAML plugin, Keycloak plugin) — not part of the build |
 
-The final artifact is `target/teamcity-oidc-auth.zip` (written to the **root** `target/`, not the module's).
+The final artifact is `target/oidc-auth.zip` (written to the **root** `target/`, not the module's).
 
 ### How TeamCity loads the plugin
 
@@ -64,7 +64,7 @@ Both `/app/oidc/login` and `/app/oidc/callback` are registered as unauthenticate
 
 ### Configuration
 
-The plugin reads `{teamcityDataDirectory}/config/oidc-auth-plugin.json` at runtime. The file is watched for changes via `FileWatcher` — no restart needed. `OidcPluginSettingsStorageImpl` owns this lifecycle and caches settings under a `ReadWriteLock`.
+The plugin reads `{teamcityDataDirectory}/config/oidc-auth.json` at runtime. The file is watched for changes via `FileWatcher` — no restart needed. `OidcPluginSettingsStorageImpl` owns this lifecycle and caches settings under a `ReadWriteLock`.
 
 ### Key TeamCity APIs in use
 

@@ -27,7 +27,7 @@ public final class OidcConstants {
     public static final String OIDC_SUB_ATTRIBUTE = "oidc.sub";
 
     // Config file name (relative to TeamCity config directory)
-    public static final String CONFIG_FILE_NAME = "oidc-auth-plugin.json";
+    public static final String CONFIG_FILE_NAME = "oidc-auth.json";
 
     // HTTP session attribute keys
     public static final String SESSION_STATE        = "oidc.state";

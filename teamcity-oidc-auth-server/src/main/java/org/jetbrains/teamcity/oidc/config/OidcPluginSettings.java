@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Full plugin configuration. Deserialized from {@code oidc-auth-plugin.json}.
+ * Full plugin configuration. Deserialized from {@code oidc-auth.json}.
  * All fields are camelCase in JSON (user-authored file).
  */
 @JsonIgnoreProperties(ignoreUnknown = true)

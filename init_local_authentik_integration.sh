@@ -29,7 +29,7 @@ TC_URL_FROM_AK="${TC_URL_FROM_AK:-$TC_URL}"
 TC_DATADIR="${TC_DATADIR:-$SCRIPT_DIR/servers/2025.11/.datadir}"
 TC_CLIENT_ID="${TC_CLIENT_ID:-teamcity}"
 TC_APP_SLUG="$TC_CLIENT_ID"
-TC_CONFIG_FILE="$TC_DATADIR/config/oidc-auth-plugin.json"
+TC_CONFIG_FILE="$TC_DATADIR/config/oidc-auth.json"
 
 # ---- Helpers ---------------------------------------------------------------
 

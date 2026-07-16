@@ -121,7 +121,7 @@ public class OidcPluginSettingsStorageImplTest {
         assertTrue(savedJson, savedJson.contains("encrypted:secret123"));
 
         // Simulate persisted file content and verify decrypt-on-read path.
-        File configFile = new File(configDir, "oidc-auth-plugin.json");
+        File configFile = new File(configDir, "oidc-auth.json");
         Files.write(configFile.toPath(), actualBytes);
         storage.reload();
 
@@ -139,7 +139,7 @@ public class OidcPluginSettingsStorageImplTest {
         assertEquals("https://original.example.com", storage.getSettings().getIssuerUrl());
 
         // Simulate external file modification
-        File configFile = new File(configDir, "oidc-auth-plugin.json");
+        File configFile = new File(configDir, "oidc-auth.json");
         String newJson = "{\"issuerUrl\":\"https://new.example.com\"}";
         Files.write(configFile.toPath(), newJson.getBytes());
 
@@ -160,7 +160,7 @@ public class OidcPluginSettingsStorageImplTest {
 
     @Test
     public void jacksonIgnoresUnknownFields() throws IOException {
-        File configFile = new File(configDir, "oidc-auth-plugin.json");
+        File configFile = new File(configDir, "oidc-auth.json");
         String json = "{\"issuerUrl\":\"https://idp.example.com\",\"unknownFutureField\":\"someValue\"}";
         Files.write(configFile.toPath(), json.getBytes());
 
