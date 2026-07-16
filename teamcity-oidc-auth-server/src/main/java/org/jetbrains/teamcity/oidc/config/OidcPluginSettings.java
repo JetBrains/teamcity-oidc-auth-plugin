@@ -1,6 +1,8 @@
 package org.jetbrains.teamcity.oidc.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import org.jetbrains.teamcity.oidc.OidcConstants;
 
 import java.util.ArrayList;
@@ -37,7 +39,9 @@ public class OidcPluginSettings {
     /** OAuth 2.0 client ID. */
     private String clientId;
 
-    /** OAuth 2.0 client secret (plaintext). */
+    /** OAuth 2.0 client secret (plaintext in memory, encrypted in persisted JSON). */
+    @JsonSerialize(using = OidcSecretSerializer.class)
+    @JsonDeserialize(using = OidcSecretDeserializer.class)
     private String clientSecret;
 
     /** OAuth 2.0 scopes. Default: ["openid", "email", "profile"]. */
@@ -186,4 +190,5 @@ public class OidcPluginSettings {
 
     public String getLoginButtonIconUrl() { return loginButtonIconUrl; }
     public void setLoginButtonIconUrl(String loginButtonIconUrl) { this.loginButtonIconUrl = loginButtonIconUrl; }
+
 }

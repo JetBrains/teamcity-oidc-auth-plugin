@@ -5,6 +5,7 @@ import jetbrains.buildServer.configuration.FileWatcher;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.ServerPaths;
 import jetbrains.buildServer.serverSide.SettingsPersister;
+import jetbrains.buildServer.serverSide.crypt.Encryption;
 import jetbrains.buildServer.serverSide.impl.FileWatcherFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.teamcity.oidc.OidcConstants;
@@ -19,6 +20,7 @@ public class OidcPluginSettingsStorageImpl implements OidcPluginSettingsStorage 
     public static final String SAVE_CONFIG_DESCRIPTION = "Saving OIDC Auth plugin configuration";
     private final File configFile;
     private final ObjectMapper objectMapper;
+    private final Encryption encryption;
     private final FileWatcher fileWatcher;
     private final SettingsPersister settingsPersister;
 
@@ -27,9 +29,11 @@ public class OidcPluginSettingsStorageImpl implements OidcPluginSettingsStorage 
 
     public OidcPluginSettingsStorageImpl(@NotNull ServerPaths serverPaths,
                                          @NotNull SettingsPersister settingsPersister,
-                                         @NotNull FileWatcherFactory fileWatcherFactory) {
+                                         @NotNull FileWatcherFactory fileWatcherFactory,
+                                         @NotNull Encryption encryption) {
         this.configFile = Paths.get(serverPaths.getConfigDir(), OidcConstants.CONFIG_FILE_NAME).toFile();
         this.objectMapper = new ObjectMapper();
+        this.encryption = encryption;
         this.fileWatcher = fileWatcherFactory.createFileWatcher(configFile);
         this.settingsPersister = settingsPersister;
     }
@@ -67,7 +71,10 @@ public class OidcPluginSettingsStorageImpl implements OidcPluginSettingsStorage 
     public void saveSettings(@NotNull OidcPluginSettings settings) throws IOException {
         synchronized (lock) {
             try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
-                objectMapper.writerWithDefaultPrettyPrinter().writeValue(os, settings);
+                objectMapper
+                        .writerWithDefaultPrettyPrinter()
+                        .withAttribute(OidcSecretSerializer.ENCRYPTION_CTX_KEY, encryption)
+                        .writeValue(os, settings);
                 settingsPersister.scheduleSaveFile(SAVE_CONFIG_DESCRIPTION, fileWatcher, os.toByteArray());
             }
             cachedSettings = settings;
@@ -87,7 +94,10 @@ public class OidcPluginSettingsStorageImpl implements OidcPluginSettingsStorage 
             return defaults;
         }
         try {
-            OidcPluginSettings result = objectMapper.readValue(configFile, OidcPluginSettings.class);
+            OidcPluginSettings result = objectMapper
+                    .readerFor(OidcPluginSettings.class)
+                    .withAttribute(OidcSecretSerializer.ENCRYPTION_CTX_KEY, encryption)
+                    .readValue(configFile);
             cachedSettings = result;
             Loggers.SERVER.debug("OIDC: settings loaded from " + configFile.getAbsolutePath());
             return result;
