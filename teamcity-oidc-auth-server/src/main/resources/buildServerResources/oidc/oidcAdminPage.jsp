@@ -8,7 +8,7 @@
 <div class="section noMargin">
   <h2 class="noBorder">OIDC Authentication Settings</h2>
 
-  <form action="${settingsActionUrl}" method="post" onsubmit="return OidcSettings.SettingsForm.submitSettings();" id="editParams" autocomplete="off">
+  <form action="<c:url value='${settingsActionUrl}'/>" method="post" onsubmit="return OidcSettings.SettingsForm.submitSettings();" id="editParams" autocomplete="off">
     <table class="runnerFormTable">
 
       <tr>
@@ -208,7 +208,6 @@
       <forms:submit label="Save"/>
       <forms:saving id="saving"/>
       <input type="hidden" id="publicKey" name="publicKey" value="<c:out value='${publicKey}'/>"/>
-      <span class="savedInfo">Settings have been saved.</span>
       <span class="error" id="error__general"></span>
     </div>
   </form>
