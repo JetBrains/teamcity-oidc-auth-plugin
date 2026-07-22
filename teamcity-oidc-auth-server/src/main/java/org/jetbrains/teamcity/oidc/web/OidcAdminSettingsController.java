@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import jetbrains.buildServer.controllers.PublicKeyUtil;
-import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
+import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jdom.Element;
@@ -30,11 +30,9 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
     private final String editAuthSchemePath;
 
     public OidcAdminSettingsController(
-            @NotNull SBuildServer server,
             @NotNull WebControllerManager webControllerManager,
             @NotNull OidcPluginSettingsStorage settingsStorage,
             @NotNull PluginDescriptor pluginDescriptor) {
-        super(server);
         this.settingsStorage = settingsStorage;
         this.editAuthSchemePath = pluginDescriptor.getPluginResourcesPath("oidc/editOidcAuthScheme.jsp");
         webControllerManager.registerController(OidcConstants.ADMIN_SETTINGS_PATH, this);
@@ -44,7 +42,10 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
     protected ModelAndView doGet(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) {
         // Rendered as the inline form inside TC's "Authentication" admin section.
         // The real settings UI is on the dedicated OIDC admin tab (OidcSettingsAdminPage).
-        return new ModelAndView(editAuthSchemePath);
+        ModelAndView modelAndView = new ModelAndView(editAuthSchemePath);
+        modelAndView.getModel().put("oidcSettingsConfigured", settingsStorage.getSettings().settingsAreConfigured());
+        modelAndView.getModel().put("issuerUrl", StringUtil.emptyIfNull(settingsStorage.getSettings().getIssuerUrl()));
+        return modelAndView;
     }
 
     @Override
@@ -57,16 +58,9 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
         OidcPluginSettings settings = new OidcPluginSettings();
         FormUtil.bindFromRequest(request, settings);
 
-
-        // Checkboxes are absent from the request when unchecked — bind explicitly.
-        settings.setDiscoveryEnabled("true".equals(request.getParameter("discoveryEnabled")));
-        settings.setCreateUsersAutomatically("true".equals(request.getParameter("createUsersAutomatically")));
-        settings.setAssignGroups("true".equals(request.getParameter("assignGroups")));
-        settings.setRemoveUnassignedGroups("true".equals(request.getParameter("removeUnassignedGroups")));
-
         // FormUtil cannot handle List<String> or nested POJOs — parse manually.
-        settings.setScopes(parseSpaceSeparated(request.getParameter("scopes")));
-        settings.setAllowedEmailDomains(parseCommaSeparated(request.getParameter("allowedEmailDomains")));
+        settings.setScopes(StringUtil.split(request.getParameter("scopes"), true, ' ', ','));
+        settings.setAllowedEmailDomains(StringUtil.split(request.getParameter("allowedEmailDomains"), true, ' ', ','));
         settings.setUsernameClaim(parseClaimMapping(request, "usernameClaim"));
         settings.setEmailClaim(parseClaimMapping(request, "emailClaim"));
         settings.setDisplayNameClaim(parseClaimMapping(request, "displayNameClaim"));
@@ -96,8 +90,9 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
 
         try {
             settingsStorage.saveSettings(settings);
+            getOrCreateMessages(request).addMessage("settingsSaved", "Settings have been saved");
         } catch (Exception e) {
-            errors.addError("_general", "Failed to save settings: " + e.getMessage());
+            errors.addError("general", "Failed to save settings: " + e.getMessage());
             errors.serialize(xmlResponse);
         }
     }

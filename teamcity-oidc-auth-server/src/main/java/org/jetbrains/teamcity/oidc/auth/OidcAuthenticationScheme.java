@@ -83,11 +83,13 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
 
     public boolean isConfigured() {
         OidcPluginSettings s = settingsStorage.getSettings();
-        return !isBlank(s.getIssuerUrl()) && !isBlank(s.getClientId());
+        return s.settingsAreConfigured();
     }
 
-    private static boolean isBlank(@Nullable String s) {
-        return s == null || s.trim().isEmpty();
+    @NotNull
+    @Override
+    public String describeProperties(@NotNull Map<String, String> properties) {
+        return "Issuer URL: " + settingsStorage.getSettings().getIssuerUrl();
     }
 
     /**

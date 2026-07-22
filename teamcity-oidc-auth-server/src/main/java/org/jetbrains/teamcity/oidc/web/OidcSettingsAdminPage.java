@@ -26,7 +26,7 @@ public class OidcSettingsAdminPage extends AdminPage {
         super(pagePlaces,
                 OidcConstants.ADMIN_TAB_ID,
                 pluginDescriptor.getPluginResourcesPath("oidc/oidcAdminPage.jsp"),
-                "OIDC Auth");
+                "OIDC Auth Settings");
         this.settingsStorage = settingsStorage;
         register();
     }
