@@ -1,12 +1,20 @@
-<%@ include file="/include-internal.jsp" %>
+<%@ include file="/include.jsp" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<jsp:useBean id="oidcSettingsConfigured" scope="request" type="java.lang.Boolean"/>
+<jsp:useBean id="issuerUrl" scope="request" type="java.lang.String"/>
 
-<tr>
-  <td colspan="2">
-    <div class="attentionComment">
-      OIDC settings (including the client secret) are managed on the dedicated
-      <a href="<c:url value='/admin/admin.html?item=oidcSettings'/>">OIDC Auth settings page</a>.
-      Enable this module first, then configure it there.
-    </div>
-  </td>
-</tr>
+<c:choose>
+  <c:when test="${oidcSettingsConfigured}">
+    <p>
+      Issuer URL: <c:out value="${issuerUrl}"/>
+    </p>
+    <p>
+      <a href="<c:url value='/admin/admin.html?item=oidcSettings'/>">Edit settings</a>
+    </p>
+  </c:when>
+  <c:otherwise>
+    <p class="attentionComment">
+      The <a href="<c:url value='/admin/admin.html?item=oidcSettings'/>">OIDC Auth settings</a> are not fully configured.
+    </p>
+  </c:otherwise>
+</c:choose>

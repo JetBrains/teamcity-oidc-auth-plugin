@@ -3,6 +3,7 @@ package org.jetbrains.teamcity.oidc.config;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import jetbrains.buildServer.util.StringUtil;
 import org.jetbrains.teamcity.oidc.OidcConstants;
 
 import java.util.ArrayList;
@@ -115,9 +116,9 @@ public class OidcPluginSettings {
         return allowedEmailDomains == null ? "" : String.join(", ", allowedEmailDomains);
     }
 
-    /** Returns {@link #scopes} as a space-separated string for form rendering. */
+    /** Returns {@link #scopes} as a comma-separated string for form rendering. */
     public String getScopesJoined() {
-        return scopes == null ? "" : String.join(" ", scopes);
+        return scopes == null ? "" : String.join(", ", scopes);
     }
 
     // ---- getters / setters -------------------------------------------------
@@ -191,4 +192,7 @@ public class OidcPluginSettings {
     public String getLoginButtonIconUrl() { return loginButtonIconUrl; }
     public void setLoginButtonIconUrl(String loginButtonIconUrl) { this.loginButtonIconUrl = loginButtonIconUrl; }
 
+    public boolean settingsAreConfigured() {
+        return !StringUtil.isEmpty(getIssuerUrl()) && !StringUtil.isEmpty(getClientId()) && !StringUtil.isEmpty(getClientSecret());
+    }
 }

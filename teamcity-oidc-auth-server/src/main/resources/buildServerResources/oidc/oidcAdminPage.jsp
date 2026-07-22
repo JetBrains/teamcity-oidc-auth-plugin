@@ -1,4 +1,4 @@
-<%@ include file="/include-internal.jsp" %>
+<%@ include file="/include.jsp" %>
 <%@ taglib prefix="forms" tagdir="/WEB-INF/tags/forms" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="l" tagdir="/WEB-INF/tags/layout" %>
@@ -6,9 +6,11 @@
 <jsp:useBean id="settingsActionUrl" scope="request" type="java.lang.String"/>
 
 <div class="section noMargin">
-  <h2 class="noBorder">OIDC Authentication Settings</h2>
+  <bs:refreshable pageUrl="${pageUrl}" containerId="oidcSettingsForm">
 
-  <form action="${settingsActionUrl}" method="post" onsubmit="return OidcSettings.SettingsForm.submitSettings();" id="editParams" autocomplete="off">
+  <bs:messages key="settingsSaved"/>
+
+  <form action="<c:url value='${settingsActionUrl}'/>" method="post" onsubmit="return OidcSettings.SettingsForm.submitSettings();" id="editParams" autocomplete="off">
     <table class="runnerFormTable">
 
       <tr>
@@ -49,14 +51,14 @@
         <th><label for="scopes">Scopes:</label></th>
         <td>
           <forms:textField name="scopes" value="${settings.scopesJoined}" className="longField"/>
-          <span class="smallNote">Space-separated list of OAuth 2.0 scopes. Default: <code>openid email profile</code>.</span>
+          <span class="smallNote">Comma-separated list of OAuth 2.0 scopes. Example: <code>openid, email, profile</code>.</span>
         </td>
       </tr>
 
       <tr>
         <th><label for="discoveryEnabled">Use discovery:</label></th>
         <td>
-          <input type="checkbox" name="discoveryEnabled" id="discoveryEnabled" value="true" ${settings.discoveryEnabled ? 'checked' : ''}/>
+          <forms:checkbox name="discoveryEnabled" checked="${settings.discoveryEnabled}"/>
           <label for="discoveryEnabled">Automatically resolve endpoints from the discovery document</label>
         </td>
       </tr>
@@ -92,7 +94,7 @@
       <tr>
         <th><label for="createUsersAutomatically">Auto-create users:</label></th>
         <td>
-          <input type="checkbox" name="createUsersAutomatically" id="createUsersAutomatically" value="true" ${settings.createUsersAutomatically ? 'checked' : ''}/>
+          <forms:checkbox name="createUsersAutomatically" checked="${settings.createUsersAutomatically}"/>
           <label for="createUsersAutomatically">Automatically create a TeamCity user on first OIDC login</label>
         </td>
       </tr>
@@ -101,14 +103,14 @@
         <th><label for="allowedEmailDomains">Allowed email domains:</label></th>
         <td>
           <forms:textField name="allowedEmailDomains" value="${settings.allowedEmailDomainsJoined}" className="longField"/>
-          <span class="smallNote">Comma-separated list. Leave empty to allow all domains.</span>
+          <span class="smallNote">Comma-separated list of allowed email domains. Leave empty to allow all domains.</span>
         </td>
       </tr>
 
       <tr>
         <th><label for="assignGroups">Group sync:</label></th>
         <td>
-          <input type="checkbox" name="assignGroups" id="assignGroups" value="true" ${settings.assignGroups ? 'checked' : ''}/>
+          <forms:checkbox name="assignGroups" checked="${settings.assignGroups}"/>
           <label for="assignGroups">Sync group membership from OIDC claims</label>
         </td>
       </tr>
@@ -116,7 +118,7 @@
       <tr>
         <th><label for="removeUnassignedGroups">Remove from absent groups:</label></th>
         <td>
-          <input type="checkbox" name="removeUnassignedGroups" id="removeUnassignedGroups" value="true" ${settings.removeUnassignedGroups ? 'checked' : ''}/>
+          <forms:checkbox name="removeUnassignedGroups" checked="${settings.removeUnassignedGroups}"/>
           <label for="removeUnassignedGroups">Remove user from TeamCity groups not present in the OIDC claim</label>
         </td>
       </tr>
@@ -131,11 +133,10 @@
       <tr>
         <th><label for="usernameClaim_mappingType">Username claim:</label></th>
         <td>
-          <select name="usernameClaim_mappingType" id="usernameClaim_mappingType"
-                  onchange="OidcSettings.toggleClaimField('usernameClaim', this.value)">
-            <option value="SUB"   ${settings.usernameClaim.mappingType == 'SUB'   ? 'selected' : ''}>Subject (sub)</option>
-            <option value="CLAIM" ${settings.usernameClaim.mappingType == 'CLAIM' ? 'selected' : ''}>Custom claim</option>
-          </select>
+          <forms:select name="usernameClaim_mappingType" onchange="OidcSettings.toggleClaimField('usernameClaim', this.value)">
+            <forms:option value="SUB" selected="${settings.usernameClaim.mappingType == 'SUB'}">Subject (sub)</forms:option>
+            <forms:option value="CLAIM" selected="${settings.usernameClaim.mappingType == 'CLAIM'}">Custom claim</forms:option>
+          </forms:select>
           <span id="usernameClaim_claimField" style="${settings.usernameClaim.mappingType == 'CLAIM' ? '' : 'display:none'}">
             <forms:textField name="usernameClaim_claimName" value="${settings.usernameClaim.claimName}"/>
           </span>
@@ -145,12 +146,11 @@
       <tr>
         <th><label for="emailClaim_mappingType">Email claim:</label></th>
         <td>
-          <select name="emailClaim_mappingType" id="emailClaim_mappingType"
-                  onchange="OidcSettings.toggleClaimField('emailClaim', this.value)">
-            <option value="NONE"  ${settings.emailClaim.mappingType == 'NONE'  ? 'selected' : ''}>None</option>
-            <option value="SUB"   ${settings.emailClaim.mappingType == 'SUB'   ? 'selected' : ''}>Subject (sub)</option>
-            <option value="CLAIM" ${settings.emailClaim.mappingType == 'CLAIM' ? 'selected' : ''}>Custom claim</option>
-          </select>
+          <forms:select name="emailClaim_mappingType" onchange="OidcSettings.toggleClaimField('emailClaim', this.value)">
+            <forms:option value="NONE"  selected="${settings.emailClaim.mappingType == 'NONE'}">None</forms:option>
+            <forms:option value="SUB"   selected="${settings.emailClaim.mappingType == 'SUB'}">Subject (sub)</forms:option>
+            <forms:option value="CLAIM" selected="${settings.emailClaim.mappingType == 'CLAIM'}">Custom claim</forms:option>
+          </forms:select>
           <span id="emailClaim_claimField" style="${settings.emailClaim.mappingType == 'CLAIM' ? '' : 'display:none'}">
             <forms:textField name="emailClaim_claimName" value="${settings.emailClaim.claimName}"/>
           </span>
@@ -160,12 +160,11 @@
       <tr>
         <th><label for="displayNameClaim_mappingType">Display name claim:</label></th>
         <td>
-          <select name="displayNameClaim_mappingType" id="displayNameClaim_mappingType"
-                  onchange="OidcSettings.toggleClaimField('displayNameClaim', this.value)">
-            <option value="NONE"  ${settings.displayNameClaim.mappingType == 'NONE'  ? 'selected' : ''}>None</option>
-            <option value="SUB"   ${settings.displayNameClaim.mappingType == 'SUB'   ? 'selected' : ''}>Subject (sub)</option>
-            <option value="CLAIM" ${settings.displayNameClaim.mappingType == 'CLAIM' ? 'selected' : ''}>Custom claim</option>
-          </select>
+          <forms:select name="displayNameClaim_mappingType" onchange="OidcSettings.toggleClaimField('displayNameClaim', this.value)">
+            <forms:option value="NONE"  selected="${settings.displayNameClaim.mappingType == 'NONE'}">None</forms:option>
+            <forms:option value="SUB"   selected="${settings.displayNameClaim.mappingType == 'SUB'}">Subject (sub)</forms:option>
+            <forms:option value="CLAIM" selected="${settings.displayNameClaim.mappingType == 'CLAIM'}">Custom claim</forms:option>
+          </forms:select>
           <span id="displayNameClaim_claimField" style="${settings.displayNameClaim.mappingType == 'CLAIM' ? '' : 'display:none'}">
             <forms:textField name="displayNameClaim_claimName" value="${settings.displayNameClaim.claimName}"/>
           </span>
@@ -208,10 +207,11 @@
       <forms:submit label="Save"/>
       <forms:saving id="saving"/>
       <input type="hidden" id="publicKey" name="publicKey" value="<c:out value='${publicKey}'/>"/>
-      <span class="savedInfo">Settings have been saved.</span>
       <span class="error" id="error__general"></span>
     </div>
   </form>
+
+  </bs:refreshable>
 </div>
 
 <script type="text/javascript">
@@ -232,7 +232,7 @@
         onCompleteSave: function(form, responseXML, err) {
           BS.ErrorsAwareListener.onCompleteSave(form, responseXML, err);
           if (!err) {
-            form.enable();
+            $j('#oidcSettingsForm')[0].refresh();
           }
         }
       }));
