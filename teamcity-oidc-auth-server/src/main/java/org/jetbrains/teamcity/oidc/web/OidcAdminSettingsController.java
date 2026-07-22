@@ -3,10 +3,6 @@ package org.jetbrains.teamcity.oidc.web;
 import jetbrains.buildServer.controllers.ActionErrors;
 import jetbrains.buildServer.controllers.BaseFormXmlController;
 import jetbrains.buildServer.controllers.FormUtil;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import jetbrains.buildServer.controllers.PublicKeyUtil;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
@@ -95,21 +91,6 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
             errors.addError("general", "Failed to save settings: " + e.getMessage());
             errors.serialize(xmlResponse);
         }
-    }
-
-    private static List<String> parseCommaSeparated(String value) {
-        if (value == null || value.trim().isEmpty()) return Collections.emptyList();
-        return Arrays.stream(value.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
-    }
-
-    private static List<String> parseSpaceSeparated(String value) {
-        if (value == null || value.trim().isEmpty()) return Collections.emptyList();
-        return Arrays.stream(value.trim().split("\\s+"))
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
     }
 
     private static OidcClaimMappingSettings parseClaimMapping(@NotNull HttpServletRequest request, @NotNull String prefix) {
