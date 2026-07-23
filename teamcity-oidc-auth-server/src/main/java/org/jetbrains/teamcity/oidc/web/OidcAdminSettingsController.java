@@ -74,10 +74,13 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
 
         ActionErrors errors = new ActionErrors();
         if (isBlank(settings.getIssuerUrl())) {
-            errors.addError("issuerUrl", "Issuer URL is required");
+            errors.addError("issuerUrl", "Issuer URL is not specified");
         }
         if (isBlank(settings.getClientId())) {
-            errors.addError("clientId", "Client ID is required");
+            errors.addError("clientId", "Client ID is not specified");
+        }
+        if (isBlank(settings.getClientSecret())) {
+            errors.addError("clientSecret", "Client secret is not specified");
         }
         if (errors.hasErrors()) {
             errors.serialize(xmlResponse);

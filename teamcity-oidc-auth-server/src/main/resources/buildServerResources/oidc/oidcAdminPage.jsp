@@ -32,9 +32,10 @@
       </tr>
 
       <tr>
-        <th><label for="clientSecret">Client Secret:</label></th>
+        <th><label for="clientSecret">Client Secret: <l:star/></label></th>
         <td>
-          <forms:passwordField name="clientSecret" encryptedPassword="${encryptedClientSecret}"/>
+          <forms:passwordField name="clientSecret" encryptedPassword="${encryptedClientSecret}" publicKey="${publicKey}"/>
+          <span class="error" id="error_clientSecret"></span>
         </td>
       </tr>
 
@@ -234,6 +235,22 @@
           if (!err) {
             $j('#oidcSettingsForm')[0].refresh();
           }
+        },
+
+        onGeneralError: function(elem) {
+          $j('#error_general').text(elem.firstChild.nodeValue);
+        },
+
+        onClientIdError: function(elem) {
+          $j('#error_clientId').text(elem.firstChild.nodeValue);
+        },
+
+        onIssuerUrlError: function(elem) {
+          $j('#error_issuerUrl').text(elem.firstChild.nodeValue);
+        },
+
+        onClientSecretError: function(elem) {
+          $j('#error_clientSecret').text(elem.firstChild.nodeValue);
         }
       }));
       return false;
