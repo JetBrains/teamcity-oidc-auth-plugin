@@ -66,18 +66,17 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
         // clientSecret is RSA-encrypted by BS.AbstractPasswordForm and arrives as encryptedClientSecret.
         // If blank (user left the field empty), keep the existing stored secret.
         String encryptedSecret = request.getParameter("encryptedClientSecret");
-        if (!isBlank(encryptedSecret)) {
-            settings.setClientSecret(RSACipher.decryptWebRequestData(encryptedSecret));
-        } else {
-            settings.setClientSecret(settingsStorage.getSettings().getClientSecret());
-        }
+        settings.setClientSecret(RSACipher.decryptWebRequestData(encryptedSecret));
 
         ActionErrors errors = new ActionErrors();
         if (isBlank(settings.getIssuerUrl())) {
-            errors.addError("issuerUrl", "Issuer URL is required");
+            errors.addError("issuerUrl", "Issuer URL is not specified");
         }
         if (isBlank(settings.getClientId())) {
-            errors.addError("clientId", "Client ID is required");
+            errors.addError("clientId", "Client ID is not specified");
+        }
+        if (isBlank(settings.getClientSecret())) {
+            errors.addError("clientSecret", "Client secret is not specified");
         }
         if (errors.hasErrors()) {
             errors.serialize(xmlResponse);
