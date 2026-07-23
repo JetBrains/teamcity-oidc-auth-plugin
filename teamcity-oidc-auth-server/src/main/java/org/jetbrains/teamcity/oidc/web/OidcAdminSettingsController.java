@@ -78,6 +78,9 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
         if (isBlank(settings.getClientSecret())) {
             errors.addError("clientSecret", "Client secret is not specified");
         }
+        if (isBlank(settings.getLoginButtonLabel())) {
+            errors.addError("loginLabel", "Login button label is not specified");
+        }
         if (errors.hasErrors()) {
             errors.serialize(xmlResponse);
             return;

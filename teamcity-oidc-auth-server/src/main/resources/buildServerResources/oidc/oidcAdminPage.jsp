@@ -173,24 +173,25 @@
       </tr>
 
       <tr>
-        <th><label for="httpTimeoutSeconds">HTTP timeout (s):</label></th>
+        <th><label for="httpTimeoutSeconds">HTTP timeout:</label></th>
         <td>
-          <forms:textField name="httpTimeoutSeconds" value="${settings.httpTimeoutSeconds}" style="width:5em;"/>
+          <forms:textField name="httpTimeoutSeconds" value="${settings.httpTimeoutSeconds}" style="width:5em;"/> seconds
         </td>
       </tr>
 
       <tr>
-        <th><label for="tokenClockSkewSeconds">Clock skew (s):</label></th>
+        <th><label for="tokenClockSkewSeconds">Clock skew:</label></th>
         <td>
-          <forms:textField name="tokenClockSkewSeconds" value="${settings.tokenClockSkewSeconds}" style="width:5em;"/>
+          <forms:textField name="tokenClockSkewSeconds" value="${settings.tokenClockSkewSeconds}" style="width:5em;"/> seconds
           <span class="smallNote">Allowed clock skew when validating token expiry.</span>
         </td>
       </tr>
 
       <tr>
-        <th><label for="loginButtonLabel">Login button label:</label></th>
+        <th><label for="loginButtonLabel">Login button label: <l:star/></label></th>
         <td>
           <forms:textField name="loginButtonLabel" value="${settings.loginButtonLabel}" className="longField"/>
+          <span class="error" id="error_loginLabel"></span>
         </td>
       </tr>
 
@@ -198,7 +199,7 @@
         <th><label for="loginButtonIconUrl">Login button icon URL:</label></th>
         <td>
           <forms:textField name="loginButtonIconUrl" value="${settings.loginButtonIconUrl}" className="longField"/>
-          <span class="smallNote">Absolute URL, root-relative path, or data URI. Leave empty to use the built-in SVG.</span>
+          <span class="smallNote">Absolute URL, root-relative path, or data URI.</span>
         </td>
       </tr>
 
@@ -208,7 +209,7 @@
       <forms:submit label="Save"/>
       <forms:saving id="saving"/>
       <input type="hidden" id="publicKey" name="publicKey" value="<c:out value='${publicKey}'/>"/>
-      <span class="error" id="error__general"></span>
+      <span class="error" id="error_general"></span>
     </div>
   </form>
 
@@ -251,6 +252,10 @@
 
         onClientSecretError: function(elem) {
           $j('#error_clientSecret').text(elem.firstChild.nodeValue);
+        },
+
+        onLoginLabelError: function(elem) {
+          $j('#error_loginLabel').text(elem.firstChild.nodeValue);
         }
       }));
       return false;
