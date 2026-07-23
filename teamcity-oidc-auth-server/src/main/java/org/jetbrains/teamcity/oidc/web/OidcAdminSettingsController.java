@@ -15,6 +15,7 @@ import org.jetbrains.teamcity.oidc.OidcConstants;
 import org.jetbrains.teamcity.oidc.config.OidcClaimMappingSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorage;
+import org.jetbrains.teamcity.oidc.oidc.OidcClient;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;

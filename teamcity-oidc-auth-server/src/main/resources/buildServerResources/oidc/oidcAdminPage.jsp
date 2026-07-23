@@ -4,6 +4,7 @@
 <%@ taglib prefix="l" tagdir="/WEB-INF/tags/layout" %>
 <jsp:useBean id="settings" scope="request" type="org.jetbrains.teamcity.oidc.config.OidcPluginSettings"/>
 <jsp:useBean id="settingsActionUrl" scope="request" type="java.lang.String"/>
+<jsp:useBean id="discoveryInfoUrl" scope="request" type="java.lang.String"/>
 
 <div class="section noMargin">
   <bs:refreshable pageUrl="${pageUrl}" containerId="oidcSettingsForm">
@@ -17,6 +18,7 @@
         <th><label for="issuerUrl">Issuer URL: <l:star/></label></th>
         <td>
           <forms:textField name="issuerUrl" value="${settings.issuerUrl}" className="longField"/>
+          <a class="btn btn_mini" href="#" onclick="OidcSettings.DiscoveryInfoDialog.show($j('#issuerUrl')[0].value); return false;">Fetch Discovery Document</a>
           <span class="smallNote">Base URL of the identity provider (e.g. <code>https://sso.example.com/realms/master</code>).
             The discovery document is fetched from <code>{issuerUrl}/.well-known/openid-configuration</code>.</span>
           <span class="error" id="error_issuerUrl"></span>
@@ -32,9 +34,9 @@
       </tr>
 
       <tr>
-        <th><label for="clientSecret">Client Secret: <l:star/></label></th>
+        <th><label for="clientSecret">Client secret: <l:star/></label></th>
         <td>
-          <forms:passwordField name="clientSecret" encryptedPassword="${encryptedClientSecret}" publicKey="${publicKey}"/>
+          <forms:passwordField name="clientSecret" encryptedPassword="${encryptedClientSecret}" publicKey="${publicKey}" className="longField"/>
           <span class="error" id="error_clientSecret"></span>
         </td>
       </tr>
@@ -216,6 +218,15 @@
   </bs:refreshable>
 </div>
 
+<bs:modalDialog formId="discoveryInfo"
+                title="Discovery Result"
+                action=""
+                closeCommand="OidcSettings.DiscoveryInfoDialog.close();"
+                saveCommand="">
+  <forms:saving id="discoveryProgress" style="float: none"/>
+  <div id="discoveryInfoContent"></div>
+</bs:modalDialog>
+
 <script type="text/javascript">
   OidcSettings = {
     toggleClaimField: function(prefix, mappingType) {
@@ -223,6 +234,29 @@
       if (field) field.style.display = (mappingType === 'CLAIM') ? '' : 'none';
     }
   };
+
+  OidcSettings.DiscoveryInfoDialog = OO.extend(BS.AbstractModalDialog, {
+    show: function(issuerUrl) {
+      $j('#discoveryInfoContent').html('');
+      this.showCentered();
+      BS.Util.show('discoveryProgress');
+      BS.ajaxRequest('<c:url value="${discoveryInfoUrl}"/>', {
+        parameters: 'issuerUrl=' + encodeURIComponent(issuerUrl),
+        onComplete: function(response) {
+          BS.Util.hide('discoveryProgress');
+          $j('#discoveryInfoContent').html(response.responseText);
+        }
+      });
+    },
+
+    getContainer: function () {
+      return $j('#discoveryInfoDialog')[0];
+    },
+
+    formElement: function () {
+      return $j('#discoveryInfo')[0];
+    }
+  });
 
   OidcSettings.SettingsForm = OO.extend(BS.AbstractPasswordForm, {
     formElement: function() {
@@ -263,8 +297,6 @@
   });
 
   $j(function() {
-    OidcSettings.SettingsForm.setupEventHandlers();
-
     var discoveryCheckbox = document.getElementById('discoveryEnabled');
     var manualEndpoints = document.getElementById('manualEndpoints');
     if (discoveryCheckbox) {

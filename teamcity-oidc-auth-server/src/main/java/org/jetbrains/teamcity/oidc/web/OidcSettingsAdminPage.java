@@ -43,6 +43,7 @@ public class OidcSettingsAdminPage extends AdminPage {
         OidcPluginSettings s = settingsStorage.getSettings();
         model.put("settings", s);
         model.put("settingsActionUrl", OidcConstants.ADMIN_SETTINGS_PATH);
+        model.put("discoveryInfoUrl", OidcConstants.ADMIN_DISCOVERY_INFO_PATH);
         model.put(PUBLIC_KEY_PARAM, RSACipher.getHexEncodedPublicKey());
         String secret = s.getClientSecret();
         model.put("encryptedClientSecret",

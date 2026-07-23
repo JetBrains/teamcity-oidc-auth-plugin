@@ -89,7 +89,8 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
     @NotNull
     @Override
     public String describeProperties(@NotNull Map<String, String> properties) {
-        return "Issuer URL: " + settingsStorage.getSettings().getIssuerUrl();
+        String issuerUrl = settingsStorage.getSettings().getIssuerUrl();
+        return "Issuer URL: " + (issuerUrl == null ? "<not configured>" : issuerUrl);
     }
 
     /**

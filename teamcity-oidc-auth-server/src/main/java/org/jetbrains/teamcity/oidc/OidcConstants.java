@@ -16,6 +16,7 @@ public final class OidcConstants {
     public static final String CALLBACK_PATH          = "/app/oidc/callback";
     public static final String BACKCHANNEL_LOGOUT_PATH = "/app/oidc/backchannel-logout";
     public static final String ADMIN_SETTINGS_PATH    = "/admin/editOidcAuthScheme.html";
+    public static final String ADMIN_DISCOVERY_INFO_PATH = "/admin/oidcDiscoveryInfo.html";
 
     // Admin tab identifier (used in /admin/admin.html?item=<ADMIN_TAB_ID>)
     public static final String ADMIN_TAB_ID = "oidcSettings";
