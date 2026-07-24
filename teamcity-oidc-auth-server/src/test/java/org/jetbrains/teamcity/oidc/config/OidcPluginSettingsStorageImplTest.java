@@ -70,7 +70,7 @@ public class OidcPluginSettingsStorageImplTest {
 
         assertNotNull(settings);
         assertTrue(settings.isDiscoveryEnabled());
-        assertFalse(settings.isCreateUsersAutomatically());
+        assertTrue(settings.isCreateUsersAutomatically());
         assertNotNull(settings.getScopes());
         assertFalse(settings.getScopes().isEmpty());
     }

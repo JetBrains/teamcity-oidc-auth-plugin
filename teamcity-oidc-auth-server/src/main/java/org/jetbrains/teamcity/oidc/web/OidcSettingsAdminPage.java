@@ -7,6 +7,7 @@ import jetbrains.buildServer.web.openapi.PagePlaces;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.teamcity.oidc.OidcConstants;
+import org.jetbrains.teamcity.oidc.auth.OidcAuthenticationScheme;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorage;
 
@@ -18,16 +19,19 @@ import static jetbrains.buildServer.controllers.PublicKeyUtil.PUBLIC_KEY_PARAM;
 public class OidcSettingsAdminPage extends AdminPage {
 
     private final OidcPluginSettingsStorage settingsStorage;
+    private final OidcAuthenticationScheme authenticationScheme;
 
     public OidcSettingsAdminPage(
             @NotNull PagePlaces pagePlaces,
             @NotNull PluginDescriptor pluginDescriptor,
+            @NotNull OidcAuthenticationScheme authenticationScheme,
             @NotNull OidcPluginSettingsStorage settingsStorage) {
         super(pagePlaces,
                 OidcConstants.ADMIN_TAB_ID,
                 pluginDescriptor.getPluginResourcesPath("oidc/oidcAdminPage.jsp"),
                 "OIDC Auth Settings");
         this.settingsStorage = settingsStorage;
+        this.authenticationScheme = authenticationScheme;
         register();
     }
 
@@ -44,6 +48,7 @@ public class OidcSettingsAdminPage extends AdminPage {
         model.put("settings", s);
         model.put("settingsActionUrl", OidcConstants.ADMIN_SETTINGS_PATH);
         model.put("discoveryInfoUrl", OidcConstants.ADMIN_DISCOVERY_INFO_PATH);
+        model.put("callbackUrl", authenticationScheme.getCallbackUrl(settingsStorage.getSettings()));
         model.put(PUBLIC_KEY_PARAM, RSACipher.getHexEncodedPublicKey());
         String secret = s.getClientSecret();
         model.put("encryptedClientSecret",

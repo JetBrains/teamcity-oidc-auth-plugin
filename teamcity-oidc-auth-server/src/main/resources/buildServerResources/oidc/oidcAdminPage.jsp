@@ -5,11 +5,12 @@
 <jsp:useBean id="settings" scope="request" type="org.jetbrains.teamcity.oidc.config.OidcPluginSettings"/>
 <jsp:useBean id="settingsActionUrl" scope="request" type="java.lang.String"/>
 <jsp:useBean id="discoveryInfoUrl" scope="request" type="java.lang.String"/>
+<jsp:useBean id="callbackUrl" scope="request" type="java.lang.String"/>
 
 <div class="section noMargin">
   <bs:refreshable pageUrl="${pageUrl}" containerId="oidcSettingsForm">
 
-  <bs:messages key="settingsSaved"/>
+  <bs:messages key="oidcSettingsSaved"/>
 
   <form action="<c:url value='${settingsActionUrl}'/>" method="post" onsubmit="return OidcSettings.SettingsForm.submitSettings();" id="editParams" autocomplete="off">
     <table class="runnerFormTable">
@@ -40,13 +41,11 @@
           <span class="error" id="error_clientSecret"></span>
         </td>
       </tr>
-
       <tr>
-        <th><label for="callbackBaseUrl">Callback base URL:</label></th>
+        <th>Callback URL:</th>
         <td>
-          <forms:textField name="callbackBaseUrl" value="${settings.callbackBaseUrl}" className="longField"/>
-          <span class="smallNote">Override the base URL used to build the redirect URI sent to the IdP.
-            Leave empty to use the TeamCity root URL.</span>
+          <span id="callbackUrl"><c:out value="${callbackUrl}"/></span><bs:copy2ClipboardLink dataId="callbackUrl" stripTags="true"/>
+          <span class="smallNote">This URL should be added to the list of the allowed callback URLs of the OAuth application</span>
         </td>
       </tr>
 

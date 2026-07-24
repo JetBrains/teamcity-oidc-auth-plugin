@@ -5,6 +5,8 @@ import jetbrains.buildServer.controllers.AuthorizationInterceptor;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.teamcity.oidc.InMemoryOidcPluginSettingsStorage;
+import org.jetbrains.teamcity.oidc.OidcConstants;
+import org.jetbrains.teamcity.oidc.auth.OidcAuthenticationScheme;
 import org.jetbrains.teamcity.oidc.auth.OidcStateManager;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
 import org.jetbrains.teamcity.oidc.oidc.OidcClient;
@@ -31,7 +33,6 @@ public class OidcLoginControllerTest {
     private InMemoryOidcPluginSettingsStorage storage;
     private OidcClient mockClient;
     private OidcStateManager stateManager;
-    private RootUrlHolder mockRootUrl;
     private OidcLoginController controller;
 
     @Before
@@ -46,16 +47,16 @@ public class OidcLoginControllerTest {
 
         mockClient = mock(OidcClient.class);
         stateManager = new OidcStateManager(); // use real state manager
-        mockRootUrl = mock(RootUrlHolder.class);
-        when(mockRootUrl.getRootUrl()).thenReturn(ROOT_URL);
+        OidcAuthenticationScheme scheme = mock(OidcAuthenticationScheme.class);
+        when(scheme.getCallbackUrl(any())).thenReturn(ROOT_URL + OidcConstants.CALLBACK_PATH);
 
         OidcDiscoveryDocument mockDoc = mock(OidcDiscoveryDocument.class);
         when(mockDoc.getAuthorizationEndpoint()).thenReturn(AUTH_ENDPOINT);
         when(mockClient.fetchDiscoveryDocument(anyString())).thenReturn(mockDoc);
 
         controller = new OidcLoginController(
-                mock(SBuildServer.class), mock(WebControllerManager.class),
-                storage, mockClient, stateManager, mockRootUrl,
+                mock(WebControllerManager.class),
+                storage, mockClient, stateManager, scheme,
                 mock(AuthorizationInterceptor.class));
     }
 
@@ -142,22 +143,7 @@ public class OidcLoginControllerTest {
     }
 
     @Test
-    public void callbackUrlUsesConfiguredBase() throws Exception {
-        settings.setCallbackBaseUrl("https://tc.example.com");
-        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/app/oidc/login");
-        req.setSession(new MockHttpSession());
-        MockHttpServletResponse resp = handle(req);
-
-        String url = resp.getRedirectedUrl();
-        assertNotNull(url);
-        assertTrue("redirect_uri should use configured callbackBaseUrl: " + url,
-                url.contains(URLDecoder.decode("https://tc.example.com/app/oidc/callback", "UTF-8"))
-                || url.contains("tc.example.com"));
-    }
-
-    @Test
     public void callbackUrlFallsBackToRootUrlHolder() throws Exception {
-        settings.setCallbackBaseUrl(null);
         MockHttpServletRequest req = new MockHttpServletRequest("GET", "/app/oidc/login");
         req.setSession(new MockHttpSession());
         MockHttpServletResponse resp = handle(req);

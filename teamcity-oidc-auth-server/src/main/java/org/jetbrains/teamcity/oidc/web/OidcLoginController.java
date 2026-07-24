@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.teamcity.oidc.OidcConstants;
 import org.jetbrains.teamcity.oidc.RedirectUtil;
+import org.jetbrains.teamcity.oidc.auth.OidcAuthenticationScheme;
 import org.jetbrains.teamcity.oidc.auth.OidcStateManager;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorage;
@@ -33,21 +34,19 @@ public class OidcLoginController extends BaseController {
     private final OidcPluginSettingsStorage settingsStorage;
     private final OidcClient oidcClient;
     private final OidcStateManager stateManager;
-    private final RootUrlHolder rootUrlHolder;
+    private final OidcAuthenticationScheme authenticationScheme;
 
     public OidcLoginController(
-            @NotNull SBuildServer server,
             @NotNull WebControllerManager webControllerManager,
             @NotNull OidcPluginSettingsStorage settingsStorage,
             @NotNull OidcClient oidcClient,
             @NotNull OidcStateManager stateManager,
-            @NotNull RootUrlHolder rootUrlHolder,
+            @NotNull OidcAuthenticationScheme authenticationScheme,
             @NotNull AuthorizationInterceptor authInterceptor) {
-        super(server);
         this.settingsStorage = settingsStorage;
         this.oidcClient = oidcClient;
         this.stateManager = stateManager;
-        this.rootUrlHolder = rootUrlHolder;
+        this.authenticationScheme = authenticationScheme;
 
         authInterceptor.addPathNotRequiringAuth(OidcConstants.LOGIN_PATH);
         webControllerManager.registerController(OidcConstants.LOGIN_PATH, this);
@@ -87,7 +86,7 @@ public class OidcLoginController extends BaseController {
         String nonce = stateManager.generateNonce(session);
 
         // Build redirect URI
-        String redirectUri = buildRedirectUri(settings);
+        String redirectUri = authenticationScheme.getCallbackUrl(settings);
 
         // Build scopes string
         List<String> scopes = settings.getScopes();
@@ -106,16 +105,6 @@ public class OidcLoginController extends BaseController {
         Loggers.SERVER.debug("OIDC: redirecting to authorization endpoint");
         response.sendRedirect(authUrl);
         return null;
-    }
-
-    @NotNull
-    private String buildRedirectUri(@NotNull OidcPluginSettings settings) {
-        String base = settings.getCallbackBaseUrl();
-        if (isBlank(base)) {
-            base = rootUrlHolder.getRootUrl();
-        }
-        if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
-        return base + OidcConstants.CALLBACK_PATH;
     }
 
     private static boolean isBlank(@Nullable String s) {

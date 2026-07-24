@@ -12,10 +12,10 @@ import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.teamcity.oidc.OidcConstants;
+import org.jetbrains.teamcity.oidc.auth.OidcAuthenticationScheme;
 import org.jetbrains.teamcity.oidc.config.OidcClaimMappingSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorage;
-import org.jetbrains.teamcity.oidc.oidc.OidcClient;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
@@ -89,7 +89,7 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
 
         try {
             settingsStorage.saveSettings(settings);
-            getOrCreateMessages(request).addMessage("settingsSaved", "Settings have been saved");
+            getOrCreateMessages(request).addMessage("oidcSettingsSaved", "Settings have been saved");
         } catch (Exception e) {
             errors.addError("general", "Failed to save settings: " + e.getMessage());
             errors.serialize(xmlResponse);

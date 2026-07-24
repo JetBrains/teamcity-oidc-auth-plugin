@@ -148,7 +148,7 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         String tokenEndpoint = resolveTokenEndpoint(settings);
 
         // 3. Build redirect URI (must match what was sent to IdP)
-        String redirectUri = buildRedirectUri(settings);
+        String redirectUri = getCallbackUrl(settings);
 
         // 4. Exchange code for tokens
         OidcTokenResponse tokenResponse = oidcClient.exchangeCodeForTokens(
@@ -251,11 +251,9 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
     }
 
     @NotNull
-    private String buildRedirectUri(@NotNull OidcPluginSettings settings) {
-        String base = settings.getCallbackBaseUrl();
-        if (base == null || base.isEmpty()) {
-            base = rootUrlHolder.getRootUrl();
-        }
+    public String getCallbackUrl(@NotNull OidcPluginSettings settings) {
+        String base = rootUrlHolder.getRootUrl();
+
         // Strip trailing slash to avoid double-slash
         if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
         return base + OidcConstants.CALLBACK_PATH;

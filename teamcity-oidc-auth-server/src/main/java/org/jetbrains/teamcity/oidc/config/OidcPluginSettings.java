@@ -48,14 +48,8 @@ public class OidcPluginSettings {
     /** OAuth 2.0 scopes. Default: ["openid", "email", "profile"]. */
     private List<String> scopes = new ArrayList<>(OidcConstants.DEFAULT_SCOPES);
 
-    /**
-     * Base URL of this TeamCity instance as seen from the browser.
-     * Used to build the redirect URI. When absent, derived from RootUrlHolder.
-     */
-    private String callbackBaseUrl;
-
     /** Auto-create TeamCity users on first OIDC login. Default false. */
-    private boolean createUsersAutomatically = false;
+    private boolean createUsersAutomatically = true;
 
     /** If non-empty, only emails from these domains may log in. */
     private List<String> allowedEmailDomains = new ArrayList<>();
@@ -152,9 +146,6 @@ public class OidcPluginSettings {
 
     public List<String> getScopes() { return scopes; }
     public void setScopes(List<String> scopes) { this.scopes = scopes; }
-
-    public String getCallbackBaseUrl() { return callbackBaseUrl; }
-    public void setCallbackBaseUrl(String callbackBaseUrl) { this.callbackBaseUrl = callbackBaseUrl; }
 
     public boolean isCreateUsersAutomatically() { return createUsersAutomatically; }
     public void setCreateUsersAutomatically(boolean createUsersAutomatically) { this.createUsersAutomatically = createUsersAutomatically; }
