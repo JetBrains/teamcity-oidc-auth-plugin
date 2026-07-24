@@ -6,11 +6,13 @@
 <c:set var="docUrl" value="${issuerUrl}/.well-known/openid-configuration"/>
 
 <table class="runnerFormTable">
+<c:if test="${not empty issuerUrl}">
 <tr>
     <td>
         Document URL: <a href="<c:out value='${docUrl}'/>"><c:out value="${docUrl}"/></a>
     </td>
 </tr>
+</c:if>
 <c:choose>
     <c:when test="${not empty oidcClientError}">
     <tr>

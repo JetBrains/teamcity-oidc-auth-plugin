@@ -1,6 +1,7 @@
 package org.jetbrains.teamcity.oidc.web;
 
 import jetbrains.buildServer.controllers.BaseController;
+import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
 import org.jetbrains.annotations.NotNull;
@@ -28,15 +29,18 @@ public class OidcDiscoveryInfoController extends BaseController {
 
     @Nullable
     @Override
-    protected ModelAndView doHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) throws Exception {
+    protected ModelAndView doHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) {
         String issuerUrl = request.getParameter("issuerUrl");
         ModelAndView mv = new ModelAndView(discoveryInfoPath);
         mv.getModel().put("issuerUrl", issuerUrl);
         mv.getModel().put("oidcClientError", "");
         try {
+            if (StringUtil.isEmpty(issuerUrl)) {
+                throw new IllegalArgumentException("The issuerUrl is not specified");
+            }
             OidcDiscoveryDocument discoveryDocument = oidcClient.fetchDiscoveryDocument(issuerUrl);
             mv.getModel().put("discoveryDocument", discoveryDocument);
-        } catch (OidcClientException e) {
+        } catch (Throwable e) {
             mv.getModel().put("discoveryDocument", new OidcDiscoveryDocument());
             mv.getModel().put("oidcClientError", e.getMessage());
         }
