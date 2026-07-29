@@ -96,8 +96,7 @@ With only these three fields, the plugin will:
 | `clientId` | — | **Required.** OAuth 2.0 client ID. |
 | `clientSecret` | — | **Required.** OAuth 2.0 client secret. Protect this file with `chmod 600`. |
 | `scopes` | `["openid","email","profile"]` | OAuth 2.0 scopes to request. |
-| `callbackBaseUrl` | (from TeamCity settings) | Override the base URL used to build the redirect URI. |
-| `createUsersAutomatically` | `false` | Auto-create TeamCity users on first OIDC login. |
+| `createUsersAutomatically` | `true` | Auto-create TeamCity users on first OIDC login. |
 | `allowedEmailDomains` | (none) | If set, only emails from these domains can log in. |
 | `assignGroups` | `false` | Sync user's TeamCity group membership from OIDC claims. |
 | `removeUnassignedGroups` | `false` | Remove user from TeamCity groups absent in the OIDC claim. Requires `assignGroups: true`. |
