@@ -132,7 +132,7 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
 
     public static void checkAdminAreaPermission(@NotNull HttpServletRequest request) {
         SUser user = SessionUser.getUser(request);
-        if (user == null || !user.isPermissionGrantedGlobally(Permission.CHANGE_SERVER_SETTINGS)) {
+        if (user == null || !user.isPermissionGrantedGlobally(Permission.MANAGE_AUTHENTICATION_SETTINGS)) {
             throw new AccessDeniedException(user, "You do not have permissions to access this page");
         }
     }
