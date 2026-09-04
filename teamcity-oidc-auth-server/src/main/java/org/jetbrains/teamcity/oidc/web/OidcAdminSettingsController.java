@@ -5,14 +5,17 @@ import jetbrains.buildServer.controllers.BaseFormXmlController;
 import jetbrains.buildServer.controllers.FormUtil;
 
 import jetbrains.buildServer.controllers.PublicKeyUtil;
+import jetbrains.buildServer.serverSide.auth.AccessDeniedException;
+import jetbrains.buildServer.serverSide.auth.Permission;
 import jetbrains.buildServer.serverSide.crypt.RSACipher;
+import jetbrains.buildServer.users.SUser;
 import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.web.openapi.PluginDescriptor;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
+import jetbrains.buildServer.web.util.SessionUser;
 import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.teamcity.oidc.OidcConstants;
-import org.jetbrains.teamcity.oidc.auth.OidcAuthenticationScheme;
 import org.jetbrains.teamcity.oidc.config.OidcClaimMappingSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorage;
@@ -37,6 +40,8 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
 
     @Override
     protected ModelAndView doGet(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) {
+        checkAdminAreaPermission(request);
+
         // Rendered as the inline form inside TC's "Authentication" admin section.
         // The real settings UI is on the dedicated OIDC admin tab (OidcSettingsAdminPage).
         ModelAndView modelAndView = new ModelAndView(editAuthSchemePath);
@@ -47,6 +52,8 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
 
     @Override
     protected void doPost(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Element xmlResponse) {
+        checkAdminAreaPermission(request);
+
         if (PublicKeyUtil.isPublicKeyExpired(request)) {
             PublicKeyUtil.writePublicKeyExpiredError(xmlResponse);
             return;
@@ -121,5 +128,12 @@ public class OidcAdminSettingsController extends BaseFormXmlController {
 
     private static boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
+    }
+
+    public static void checkAdminAreaPermission(@NotNull HttpServletRequest request) {
+        SUser user = SessionUser.getUser(request);
+        if (user == null || !user.isPermissionGrantedGlobally(Permission.MANAGE_AUTHENTICATION_SETTINGS)) {
+            throw new AccessDeniedException(user, "You do not have permissions to access this page");
+        }
     }
 }

@@ -8,7 +8,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.teamcity.oidc.OidcConstants;
 import org.jetbrains.teamcity.oidc.oidc.OidcClient;
-import org.jetbrains.teamcity.oidc.oidc.OidcClientException;
 import org.jetbrains.teamcity.oidc.oidc.OidcDiscoveryDocument;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -30,6 +29,8 @@ public class OidcDiscoveryInfoController extends BaseController {
     @Nullable
     @Override
     protected ModelAndView doHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response) {
+        OidcAdminSettingsController.checkAdminAreaPermission(request);
+
         String issuerUrl = request.getParameter("issuerUrl");
         ModelAndView mv = new ModelAndView(discoveryInfoPath);
         mv.getModel().put("issuerUrl", issuerUrl);

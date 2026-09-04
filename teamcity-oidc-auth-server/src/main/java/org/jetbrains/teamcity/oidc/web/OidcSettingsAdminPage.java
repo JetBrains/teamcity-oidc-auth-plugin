@@ -58,6 +58,6 @@ public class OidcSettingsAdminPage extends AdminPage {
     @Override
     public boolean isAvailable(@NotNull HttpServletRequest request) {
         return super.isAvailable(request)
-                && checkHasGlobalPermission(request, Permission.CHANGE_SERVER_SETTINGS);
+                && checkHasGlobalPermission(request, Permission.MANAGE_AUTHENTICATION_SETTINGS);
     }
 }
