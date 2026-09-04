@@ -123,6 +123,58 @@ public class OidcAuthenticationSchemeTest {
     }
 
     @Test
+    public void existingUserIsAuthenticatedFirstTime() throws Exception {
+        when(mockUserModel.findUserAccount(null, USERNAME)).thenReturn(mockUser);
+
+        HttpAuthenticationResult result = scheme.processAuthenticationRequest(callbackRequest(), new MockHttpServletResponse(), new HashMap<>());
+        assertEquals(HttpAuthenticationResult.Type.UNAUTHENTICATED, result.getType());
+
+        when(mockUser.getVerifiedEmail()).thenReturn("some@dot.com");
+
+        result = scheme.processAuthenticationRequest(callbackRequest(), new MockHttpServletResponse(), new HashMap<>());
+        assertEquals(HttpAuthenticationResult.Type.UNAUTHENTICATED, result.getType());
+
+        when(mockUser.getVerifiedEmail()).thenReturn(EMAIL);
+
+        // no email claim
+        Map<String, Object> rawClaims = new HashMap<>();
+        rawClaims.put("preferred_username", USERNAME);
+        rawClaims.put("name", "Test User");
+        OidcIdTokenClaims claims = new OidcIdTokenClaims(
+                ISSUER, "sub-123", Collections.singletonList(CLIENT_ID),
+                System.currentTimeMillis() / 1000 + 3600,
+                System.currentTimeMillis() / 1000 - 10,
+                NONCE, "", false, "Test User", USERNAME, rawClaims);
+        when(mockValidator.validateAndDecode(anyString(), anyString(), eq(ISSUER), eq(CLIENT_ID), eq(NONCE), anyInt()))
+                .thenReturn(claims);
+
+        result = scheme.processAuthenticationRequest(callbackRequest(), new MockHttpServletResponse(), new HashMap<>());
+        assertEquals(HttpAuthenticationResult.Type.UNAUTHENTICATED, result.getType());
+
+        // no verified email claim
+        rawClaims = new HashMap<>();
+        rawClaims.put("preferred_username", USERNAME);
+        rawClaims.put("name", "Test User");
+        rawClaims.put("email", EMAIL);
+        claims = new OidcIdTokenClaims(
+                ISSUER, "sub-123", Collections.singletonList(CLIENT_ID),
+                System.currentTimeMillis() / 1000 + 3600,
+                System.currentTimeMillis() / 1000 - 10,
+                NONCE, "EMAIL", false, "Test User", USERNAME, rawClaims);
+        when(mockValidator.validateAndDecode(anyString(), anyString(), eq(ISSUER), eq(CLIENT_ID), eq(NONCE), anyInt()))
+                .thenReturn(claims);
+
+        result = scheme.processAuthenticationRequest(callbackRequest(), new MockHttpServletResponse(), new HashMap<>());
+        assertEquals(HttpAuthenticationResult.Type.UNAUTHENTICATED, result.getType());
+
+        when(mockValidator.validateAndDecode(anyString(), anyString(), eq(ISSUER), eq(CLIENT_ID), eq(NONCE), anyInt()))
+                .thenReturn(validClaims);
+
+        result = scheme.processAuthenticationRequest(callbackRequest(), new MockHttpServletResponse(), new HashMap<>());
+        assertEquals(HttpAuthenticationResult.Type.AUTHENTICATED, result.getType());
+    }
+
+    @Test
     public void unknownUserWithAutoCreateDisabled_isRejected() throws Exception {
         settings.setCreateUsersAutomatically(false);
         when(mockUserModel.findUserAccount(null, USERNAME)).thenReturn(null);
@@ -147,6 +199,7 @@ public class OidcAuthenticationSchemeTest {
                         && "Test User".equals(account.getName())
                         && EMAIL.equals(account.getEmail())));
         verify(mockUser, never()).updateUserAccount(any(), any(), any());
+        verify(mockUser).setEmailIsVerified(EMAIL);
     }
 
     @Test
