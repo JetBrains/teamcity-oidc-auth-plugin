@@ -10,6 +10,7 @@ import jetbrains.buildServer.users.UserModelEx;
 import jetbrains.buildServer.users.impl.NewUserAccount;
 import jetbrains.buildServer.users.impl.UserEx;
 import org.jetbrains.teamcity.oidc.InMemoryOidcPluginSettingsStorage;
+import org.jetbrains.teamcity.oidc.OidcConstants;
 import org.jetbrains.teamcity.oidc.config.OidcClaimMappingSettings;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettings;
 import org.jetbrains.teamcity.oidc.oidc.*;
@@ -113,6 +114,7 @@ public class OidcAuthenticationSchemeTest {
     @Test
     public void existingUserIsAuthenticated() throws Exception {
         when(mockUserModel.findUserAccount(null, USERNAME)).thenReturn(mockUser);
+        when(mockUser.getAttribute(OidcConstants.OIDC_SUB_ATTRIBUTE)).thenReturn("sub-123");
         MockHttpServletResponse resp = new MockHttpServletResponse();
 
         HttpAuthenticationResult result = scheme.processAuthenticationRequest(callbackRequest(), resp, new HashMap<>());
@@ -161,6 +163,7 @@ public class OidcAuthenticationSchemeTest {
     public void emailDomainAllowlistPermits_allowedDomain() throws Exception {
         settings.setAllowedEmailDomains(Collections.singletonList("example.com"));
         when(mockUserModel.findUserAccount(null, USERNAME)).thenReturn(mockUser);
+        when(mockUser.getAttribute(OidcConstants.OIDC_SUB_ATTRIBUTE)).thenReturn("sub-123");
 
         HttpAuthenticationResult result = scheme.processAuthenticationRequest(callbackRequest(), new MockHttpServletResponse(), new HashMap<>());
 
@@ -171,6 +174,7 @@ public class OidcAuthenticationSchemeTest {
     public void emptyAllowlistPermitsAll() throws Exception {
         settings.setAllowedEmailDomains(Collections.emptyList());
         when(mockUserModel.findUserAccount(null, USERNAME)).thenReturn(mockUser);
+        when(mockUser.getAttribute(OidcConstants.OIDC_SUB_ATTRIBUTE)).thenReturn("sub-123");
 
         HttpAuthenticationResult result = scheme.processAuthenticationRequest(callbackRequest(), new MockHttpServletResponse(), new HashMap<>());
 
@@ -229,6 +233,7 @@ public class OidcAuthenticationSchemeTest {
         when(adminGroup.getKey()).thenReturn("admins");
         when(mockGroupManager.getUserGroups()).thenReturn(Arrays.asList(devsGroup, adminGroup));
         when(mockUserModel.findUserAccount(null, USERNAME)).thenReturn(mockUser);
+        when(mockUser.getAttribute(OidcConstants.OIDC_SUB_ATTRIBUTE)).thenReturn("sub-123");
 
         scheme.processAuthenticationRequest(callbackRequest(), new MockHttpServletResponse(), new HashMap<>());
 
@@ -251,6 +256,7 @@ public class OidcAuthenticationSchemeTest {
         when(mockGroupManager.getUserGroups()).thenReturn(Collections.singletonList(existingGroup));
         when(mockUser.getUserGroups()).thenReturn(Collections.singletonList(existingGroup));
         when(mockUserModel.findUserAccount(null, USERNAME)).thenReturn(mockUser);
+        when(mockUser.getAttribute(OidcConstants.OIDC_SUB_ATTRIBUTE)).thenReturn("sub-123");
 
         scheme.processAuthenticationRequest(callbackRequest(), new MockHttpServletResponse(), new HashMap<>());
 
@@ -280,6 +286,7 @@ public class OidcAuthenticationSchemeTest {
         subMapping.setMappingType(OidcClaimMappingSettings.MappingType.SUB);
         settings.setUsernameClaim(subMapping);
         when(mockUserModel.findUserAccount(null, "sub-123")).thenReturn(mockUser);
+        when(mockUser.getAttribute(OidcConstants.OIDC_SUB_ATTRIBUTE)).thenReturn("sub-123");
 
         HttpAuthenticationResult result = scheme.processAuthenticationRequest(callbackRequest(), new MockHttpServletResponse(), new HashMap<>());
 

@@ -185,7 +185,10 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
 
         // 8. Apply email domain allowlist
         String email = resolveClaim(settings.getEmailClaim(), idTokenClaims, userInfo);
-        if (!settings.getAllowedEmailDomains().isEmpty() && email != null) {
+        if (!settings.getAllowedEmailDomains().isEmpty()) {
+            if (email == null) {
+                throw new OidcAuthException("Email claim is required when an email allowlist is configured");
+            }
             checkEmailDomain(email, settings.getAllowedEmailDomains());
         }
 
