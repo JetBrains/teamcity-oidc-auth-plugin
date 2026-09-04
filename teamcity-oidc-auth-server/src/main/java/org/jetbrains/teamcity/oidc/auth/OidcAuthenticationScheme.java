@@ -6,6 +6,7 @@ import jetbrains.buildServer.controllers.interceptors.auth.HttpAuthenticationSch
 import jetbrains.buildServer.controllers.interceptors.auth.util.HttpAuthUtil;
 import jetbrains.buildServer.groups.SUserGroup;
 import jetbrains.buildServer.groups.UserGroupManager;
+import jetbrains.buildServer.log.LogUtil;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
 import jetbrains.buildServer.serverSide.auth.ServerPrincipal;
@@ -202,30 +203,30 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
                 // we found some user account by username, but they either never logged in with OIDC auth or the sub claim has been changed
                 // instead of simply allowing them to login we need to ensure that we can match the user by the verified email
                 if (email == null) {
-                    Loggers.AUTH.info("OIDC: the user account is found by '" + username + "' but it was not created by the OIDC auth and there is no email claim available to match it by the verified email");
+                    Loggers.AUTH.warn("OIDC: the user account is found by '" + username + "' but it was not created by the OIDC auth and there is no email claim available to match it by the verified email");
                     throw new OidcAuthException("Cannot authenticate user with username '" + username + "' (ask system administrator for details)");
                 }
 
                 if (!Boolean.TRUE.equals(idTokenClaims.getEmailVerified())) {
-                    Loggers.AUTH.info("OIDC: the user account is found by '" + username + "' but it was not created by the OIDC auth and there is no verified email claim available");
+                    Loggers.AUTH.warn("OIDC: the user account is found by '" + username + "' but it was not created by the OIDC auth and there is no verified email claim available");
                     throw new OidcAuthException("Cannot authenticate user with username '" + username + "' (ask system administrator for details)");
                 }
 
                 String verifiedEmail = ((UserEx) user).getVerifiedEmail();
                 if (verifiedEmail == null) {
-                    Loggers.AUTH.info("OIDC: the user account is found by '" + username + "' but it does not have a verified email");
+                    Loggers.AUTH.warn("OIDC: the user account is found by '" + username + "' but it does not have a verified email");
                     throw new OidcAuthException("Cannot authenticate user with username '" + username + "' (ask system administrator for details)");
                 }
 
                 if (!email.equals(verifiedEmail)) {
-                    Loggers.AUTH.info("OIDC: the user account is found by '" + username + "' but its verified email '" + verifiedEmail + "' differs from the email claim: '" + email + "'");
+                    Loggers.AUTH.warn("OIDC: the user account is found by '" + username + "' but its verified email '" + verifiedEmail + "' differs from the email claim: '" + email + "'");
                     throw new OidcAuthException("Cannot authenticate user with username '" + username + "' (ask system administrator for details)");
                 }
             }
         }
 
         if (user == null && settings.isCreateUsersAutomatically()) {
-            Loggers.AUTH.info("OIDC: auto-creating user '" + username + "'");
+            Loggers.AUTH.warn("OIDC: creating a new user account with username '" + username + "'");
             String displayName = resolveClaim(settings.getDisplayNameClaim(), idTokenClaims, userInfo);
             user = userModel.createUserAccount(new NewUserAccount(username, displayName, email, null, Collections.emptyMap()));
             if (email != null && Boolean.TRUE.equals(idTokenClaims.getEmailVerified())) {
@@ -233,7 +234,7 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
             }
         }
         if (user == null) {
-            throw new OidcAuthException("User '" + username + "' not found and auto-creation is disabled");
+            throw new OidcAuthException("User '" + username + "' not found and automatic creation of users is disabled");
         }
 
         // 10. Group sync
@@ -251,7 +252,7 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
             session.setAttribute(OidcConstants.SESSION_USER_ID, user.getId());
         }
 
-        Loggers.AUTH.info("OIDC: authenticated user '" + username + "' (sub='" + sub + "', userId=" + user.getId() + ")");
+        Loggers.AUTH.info("OIDC: authenticated user " + LogUtil.describe(user) + " using the claims: (sub='" + sub + "', email='" + email + "')");
         String redirectUrl = getPostLoginRedirect(session, request);
         return HttpAuthenticationResult.authenticated(
                 new ServerPrincipal(user.getRealm(), user.getUsername(), null,
