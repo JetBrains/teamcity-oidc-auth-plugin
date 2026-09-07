@@ -45,7 +45,7 @@ public class OidcPluginSettingsStorageImpl implements OidcPluginSettingsStorage 
             try {
                 reloadInternal();
             } catch (IOException e) {
-                Loggers.SERVER.error("OIDC: failed to reload settings on file change", e);
+                Loggers.AUTH.error("OIDC: failed to reload settings on file change", e);
             }
         });
         fileWatcher.start();
@@ -60,7 +60,7 @@ public class OidcPluginSettingsStorageImpl implements OidcPluginSettingsStorage 
             try {
                 return reloadInternal();
             } catch (IOException e) {
-                Loggers.SERVER.error("OIDC: failed to load settings, using defaults", e);
+                Loggers.AUTH.error("OIDC: failed to load settings, using defaults", e);
                 cachedSettings = new OidcPluginSettings();
                 return cachedSettings;
             }
@@ -99,10 +99,10 @@ public class OidcPluginSettingsStorageImpl implements OidcPluginSettingsStorage 
                     .withAttribute(OidcSecretSerializer.ENCRYPTION_CTX_KEY, encryption)
                     .readValue(configFile);
             cachedSettings = result;
-            Loggers.SERVER.debug("OIDC: settings loaded from " + configFile.getAbsolutePath());
+            Loggers.AUTH.debug("OIDC: settings loaded from " + configFile.getAbsolutePath());
             return result;
         } catch (IOException e) {
-            Loggers.SERVER.error("OIDC: failed to parse settings file " + configFile.getAbsolutePath(), e);
+            Loggers.AUTH.error("OIDC: failed to parse settings file " + configFile.getAbsolutePath(), e);
             throw e;
         }
     }

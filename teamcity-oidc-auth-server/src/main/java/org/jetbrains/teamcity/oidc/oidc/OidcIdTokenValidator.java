@@ -88,7 +88,7 @@ public class OidcIdTokenValidator {
 
         if (key == null && kid != null) {
             // kid not found — refresh JWKS once and retry
-            Loggers.SERVER.debug("OIDC: unknown kid '" + kid + "', refreshing JWKS");
+            Loggers.AUTH.debug("OIDC: unknown kid '" + kid + "', refreshing JWKS");
             oidcClient.invalidateDiscoveryCache();
             jwkSet = fetchJwkSet(jwksUri);
             key = selectKey(jwkSet, kid);
