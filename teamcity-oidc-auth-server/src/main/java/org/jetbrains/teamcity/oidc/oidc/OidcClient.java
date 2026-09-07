@@ -1,6 +1,7 @@
 package org.jetbrains.teamcity.oidc.oidc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.intellij.openapi.diagnostic.Logger;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.IOGuard;
 import jetbrains.buildServer.util.HTTPRequestBuilder;
@@ -10,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.teamcity.oidc.OidcConstants;
 import org.jetbrains.teamcity.oidc.config.OidcPluginSettingsStorage;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -22,7 +24,6 @@ import java.util.concurrent.atomic.AtomicReference;
  * Uses TeamCity's {@link HTTPRequestBuilder} with {@link IOGuard} for network access.
  */
 public class OidcClient {
-
     private final OidcPluginSettingsStorage settingsStorage;
     private final HTTPRequestBuilder.RequestHandler requestHandler;
     private final ObjectMapper objectMapper;
@@ -51,7 +52,7 @@ public class OidcClient {
             return cached.document;
         }
         String discoveryUrl = issuerUrl + OidcConstants.DISCOVERY_PATH;
-        Loggers.SERVER.debug("OIDC: fetching discovery document from " + discoveryUrl);
+        Loggers.AUTH.debug("OIDC: fetching discovery document from " + discoveryUrl);
         OidcDiscoveryDocument doc = doGet(discoveryUrl, OidcDiscoveryDocument.class,
                 settingsStorage.getSettings().getHttpTimeoutSeconds() * 1000);
         discoveryCache = new CachedDiscovery(issuerUrl, doc);
@@ -74,7 +75,7 @@ public class OidcClient {
             @NotNull String redirectUri,
             @NotNull String clientId,
             @NotNull String clientSecret) throws OidcClientException {
-        Loggers.SERVER.debug("OIDC: exchanging authorization code at " + tokenEndpoint);
+        Loggers.AUTH.debug("OIDC: exchanging authorization code at " + tokenEndpoint);
         Map<String, String> form = new LinkedHashMap<>();
         form.put("grant_type", "authorization_code");
         form.put("code", code);
@@ -90,7 +91,7 @@ public class OidcClient {
      */
     @NotNull
     public OidcUserInfo fetchUserInfo(@NotNull String userInfoEndpoint, @NotNull String accessToken) throws OidcClientException {
-        Loggers.SERVER.debug("OIDC: fetching userinfo from " + userInfoEndpoint);
+        Loggers.AUTH.debug("OIDC: fetching userinfo from " + userInfoEndpoint);
         int timeout = settingsStorage.getSettings().getHttpTimeoutSeconds() * 1000;
         return doGetWithBearer(userInfoEndpoint, accessToken, OidcUserInfo.class, timeout);
     }
@@ -105,7 +106,7 @@ public class OidcClient {
             @NotNull String accessToken,
             @NotNull String clientId,
             @NotNull String clientSecret) throws OidcClientException {
-        Loggers.SERVER.debug("OIDC: introspecting token at " + introspectionEndpoint);
+        Loggers.AUTH.debug("OIDC: introspecting token at " + introspectionEndpoint);
         Map<String, String> form = new LinkedHashMap<>();
         form.put("token", accessToken);
         form.put("token_type_hint", "access_token");
@@ -120,7 +121,7 @@ public class OidcClient {
      */
     @NotNull
     public String fetchJwks(@NotNull String jwksUri) throws OidcClientException {
-        Loggers.SERVER.debug("OIDC: fetching JWKS from " + jwksUri);
+        Loggers.AUTH.debug("OIDC: fetching JWKS from " + jwksUri);
         int timeout = settingsStorage.getSettings().getHttpTimeoutSeconds() * 1000;
         return doGetRaw(jwksUri, timeout);
     }
@@ -143,13 +144,7 @@ public class OidcClient {
         builder.withMethod(HttpMethod.GET)
                .withHeader("Authorization", "Bearer " + token)
                .withHeader("Accept", "application/json")
-               .onErrorResponse(response -> {
-                   int status = response.getStatusCode();
-                   String respBody = response.getBodyAsString(StandardCharsets.UTF_8.name());
-                   errorRef.set(new OidcClientException(
-                           "UserInfo request failed with status " + status + " from " + url,
-                           status, extractIdpError(respBody), null));
-               })
+               .onErrorResponse(response -> errorRef.set(extractError(response, "UserInfo", url)))
                .onSuccess(response ->
                    bodyRef.set(response.getBodyAsString(StandardCharsets.UTF_8.name())));
 
@@ -166,13 +161,7 @@ public class OidcClient {
         HTTPRequestBuilder builder = buildRequest(url, timeoutMs);
         builder.withMethod(HttpMethod.GET)
                .withHeader("Accept", "application/json")
-               .onErrorResponse(response -> {
-                   int status = response.getStatusCode();
-                   String respBody = response.getBodyAsString(StandardCharsets.UTF_8.name());
-                   errorRef.set(new OidcClientException(
-                           "GET request failed with status " + status + " from " + url,
-                           status, extractIdpError(respBody), null));
-               })
+               .onErrorResponse(response -> errorRef.set(extractError(response, "GET", url)))
                .onSuccess(response ->
                    bodyRef.set(response.getBodyAsString(StandardCharsets.UTF_8.name())));
 
@@ -194,19 +183,13 @@ public class OidcClient {
 
         HTTPRequestBuilder builder = buildRequest(url, timeoutMs);
         builder.withMethod(HttpMethod.POST)
-               .withHeader("Authorization", "Basic " + credentials)
-               .withHeader("Accept", "application/json")
-               .withHeader("Content-Type", "application/x-www-form-urlencoded")
-               .withData(formData)
-               .onErrorResponse(response -> {
-                   int status = response.getStatusCode();
-                   String respBody = response.getBodyAsString(StandardCharsets.UTF_8.name());
-                   errorRef.set(new OidcClientException(
-                           "POST request failed with status " + status + " from " + url,
-                           status, extractIdpError(respBody), null));
-               })
-               .onSuccess(response ->
-                   bodyRef.set(response.getBodyAsString(StandardCharsets.UTF_8.name())));
+                .withHeader("Authorization", "Basic " + credentials)
+                .withHeader("Accept", "application/json")
+                .withHeader("Content-Type", "application/x-www-form-urlencoded")
+                .withData(formData)
+                .onErrorResponse(response -> errorRef.set(extractError(response, "POST", url)))
+                .onSuccess(response ->
+                        bodyRef.set(response.getBodyAsString(StandardCharsets.UTF_8.name())));
 
         executeRequest(builder, url);
         if (errorRef.get() != null) throw errorRef.get();
@@ -224,13 +207,7 @@ public class OidcClient {
                .withHeader("Accept", "application/json")
                .withHeader("Content-Type", "application/x-www-form-urlencoded")
                .withData(formData)
-               .onErrorResponse(response -> {
-                   int status = response.getStatusCode();
-                   String respBody = response.getBodyAsString(StandardCharsets.UTF_8.name());
-                   errorRef.set(new OidcClientException(
-                           "POST request failed with status " + status + " from " + url,
-                           status, extractIdpError(respBody), null));
-               })
+               .onErrorResponse(response -> errorRef.set(extractError(response, "POST", url)))
                .onSuccess(response ->
                    bodyRef.set(response.getBodyAsString(StandardCharsets.UTF_8.name())));
 
@@ -240,12 +217,23 @@ public class OidcClient {
     }
 
     @NotNull
+    private OidcClientException extractError(@NotNull HTTPRequestBuilder.Response response, @NotNull String reqName, @NotNull String url) throws IOException {
+        int status = response.getStatusCode();
+        String respBody = response.getBodyAsString(StandardCharsets.UTF_8.name());
+        String message = reqName + " request failed with status " + status + " from " + url;
+        Loggers.AUTH.debug(message + ", response body:\n" + respBody);
+        return new OidcClientException(
+                message,
+                status, extractIdpError(respBody), null);
+    }
+
+    @NotNull
     private HTTPRequestBuilder buildRequest(@NotNull String url, int timeoutMs) {
         try {
             return HTTPRequestBuilder.request(url)
                     .allowNonSecureConnection(true)
                     .withTimeout(timeoutMs)
-                    .onException(e -> Loggers.SERVER.warnAndDebugDetails("OIDC: HTTP request error for " + url, e));
+                    .onException(e -> Loggers.AUTH.warnAndDebugDetails("OIDC: HTTP request error for " + url, e));
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException("Invalid URL: " + url, e);
         }
@@ -268,7 +256,7 @@ public class OidcClient {
         try {
             return objectMapper.readValue(body, type);
         } catch (Exception e) {
-            Loggers.SERVER.debug("OIDC: failed to parse response from " + url + ": " + body);
+            Loggers.AUTH.debug("OIDC: failed to parse response from " + url + ": " + body);
             throw new OidcClientException("Failed to parse response from " + url + ": " + e.getMessage(), e);
         }
     }

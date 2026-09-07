@@ -58,7 +58,7 @@ public class OidcLoginController extends BaseController {
         OidcPluginSettings settings = settingsStorage.getSettings();
 
         if (isBlank(settings.getClientId()) || isBlank(settings.getIssuerUrl())) {
-            Loggers.SERVER.error("OIDC: cannot initiate login — clientId or issuerUrl is not configured");
+            Loggers.AUTH.error("OIDC: cannot initiate login — clientId or issuerUrl is not configured");
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     "OIDC plugin is not configured. Please create " + OidcConstants.CONFIG_FILE_NAME);
             return null;
@@ -102,7 +102,7 @@ public class OidcLoginController extends BaseController {
                 + "&state=" + URLEncoder.encode(state, "UTF-8")
                 + "&nonce=" + URLEncoder.encode(nonce, "UTF-8");
 
-        Loggers.SERVER.debug("OIDC: redirecting to authorization endpoint");
+        Loggers.AUTH.debug("OIDC: redirecting to authorization endpoint");
         response.sendRedirect(authUrl);
         return null;
     }
