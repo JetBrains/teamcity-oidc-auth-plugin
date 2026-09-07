@@ -11,7 +11,7 @@
   <a href="${loginUrl}" title="${oidcSettings.loginButtonLabel}" class="oidc-login-btn">
     <c:choose>
       <c:when test="${not empty oidcSettings.loginButtonIconUrl}">
-        <img src="${oidcSettings.loginButtonIconUrl}" alt="${oidcSettings.loginButtonLabel}" style="width:50px;height:50px;">
+        <img src="${oidcSettings.loginButtonIconUrl}" alt="${oidcSettings.loginButtonLabel}">
       </c:when>
       <c:when test="${not empty oidcSettings.loginButtonLabel}">
         <c:out value="${oidcSettings.loginButtonLabel}"/>
