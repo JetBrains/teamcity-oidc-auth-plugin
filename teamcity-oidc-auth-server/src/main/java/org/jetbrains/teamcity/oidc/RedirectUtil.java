@@ -24,6 +24,7 @@ public final class RedirectUtil {
     public static String sanitizeRedirectPath(@Nullable String path) {
         if (path == null || path.isEmpty()) return null;
         String sanitized = stripCrlf(path);
+        if (sanitized.contains("\\")) return null;
         if (!sanitized.startsWith("/") || sanitized.startsWith("//")) return null;
         return sanitized;
     }
