@@ -8,6 +8,7 @@ import jetbrains.buildServer.groups.SUserGroup;
 import jetbrains.buildServer.groups.UserGroupManager;
 import jetbrains.buildServer.log.LogUtil;
 import jetbrains.buildServer.log.Loggers;
+import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.serverSide.auth.LoginConfiguration;
 import jetbrains.buildServer.serverSide.auth.ServerPrincipal;
 import jetbrains.buildServer.users.SUser;
@@ -199,7 +200,7 @@ public class OidcAuthenticationScheme extends HttpAuthenticationSchemeAdapter {
         SUser user = userModel.findUserAccount(null, username);
         if (user != null) {
             String existingSub = ((UserEx) user).getAttribute(OidcConstants.OIDC_SUB_ATTRIBUTE);
-            if (!sub.equals(existingSub)) {
+            if (!sub.equals(existingSub) && TeamCityProperties.getBooleanOrTrue("teamcity.oidc.auth.emptySubAttr.applyEmailCheck")) {
                 // we found some user account by username, but they either never logged in with OIDC auth or the sub claim has been changed
                 // instead of simply allowing them to login we need to ensure that we can match the user by the verified email
                 if (email == null) {
